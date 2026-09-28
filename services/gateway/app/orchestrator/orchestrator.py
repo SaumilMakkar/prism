@@ -33,7 +33,6 @@ class Orchestrator:
         self.vector_service_url = vector_service_url
         self.ai_service_url = ai_service_url
         self.ml_service_url = ml_service_url
-        self._session_entities: dict[str, list[str]] = {}
 
     def _nli(self, premise: str, hypothesis: str) -> bool:
         with httpx.Client(timeout=15.0) as client:
@@ -52,7 +51,7 @@ class Orchestrator:
             return [RetrievalHit.model_validate(h) for h in resp.json()["hits"]]
 
     def _decompose(self, session_id: str, text: str) -> tuple[list[str], str]:
-        entities = self._session_entities.get(session_id, [])
+        entities = self.controllers.entities_for(session_id)
         with httpx.Client(timeout=15.0) as client:
             resp = client.post(
                 f"{self.ai_service_url}/decompose",
