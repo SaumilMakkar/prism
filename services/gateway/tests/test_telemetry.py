@@ -25,6 +25,21 @@ def test_tampering_is_detected(tmp_path):
     assert HashChain.verify(writer.read_all(), genesis=writer.chain.genesis) is False
 
 
+def test_writer_restart_resumes_the_chain_instead_of_breaking_it(tmp_path):
+    path = tmp_path / "events.jsonl"
+
+    writer_a = TelemetryWriter(path=path)
+    writer_a.emit("controller_decision", trace_id="t1", decision="wait")
+    writer_a.emit("controller_decision", trace_id="t2", decision="retrieve")
+
+    # Simulate a process restart against the same file.
+    writer_b = TelemetryWriter(path=path)
+    writer_b.emit("controller_decision", trace_id="t3", decision="wait")
+
+    assert writer_b.verify() is True
+    assert len(writer_b.read_all()) == 3
+
+
 def test_raw_logging_false_strips_transcript_fields(tmp_path, monkeypatch):
     monkeypatch.setenv("RAW_LOGGING", "false")
     import importlib
