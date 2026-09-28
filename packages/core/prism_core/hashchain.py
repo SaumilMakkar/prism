@@ -18,6 +18,17 @@ class HashChain:
     def __post_init__(self) -> None:
         self._last_hash = self.genesis
 
+    def resume(self, last_hash: str) -> None:
+        """Move the chain's tip to `last_hash` without changing `genesis`.
+
+        Used when a writer restarts and reopens an existing JSONL file: the
+        in-memory chain would otherwise start a fresh genesis while still
+        appending to the old file, breaking verification on the very next
+        write. `genesis` stays the true start-of-file marker; only the tip
+        the next `append()` links from moves forward.
+        """
+        self._last_hash = last_hash
+
     def append(self, event: dict) -> dict:
         """Return the event augmented with prev_hash/hash; advances the chain."""
         prev_hash = self._last_hash
