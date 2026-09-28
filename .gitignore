@@ -11,3 +11,4 @@ venv/
 telemetry/
 *.log
 .DS_Store
+*.tsbuildinfo
