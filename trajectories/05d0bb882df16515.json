@@ -1,0 +1,7 @@
+{
+  "system": "You split a support-agent's live transcript fragment into at most 4 independent sub-questions. Return strict JSON: {\"sub_queries\": [\"...\", \"...\"]}. Known entities already established in this session: Oh",
+  "user": "Oh, and I bought it abroad, does that change anything?",
+  "model": "gpt-5.6-luna",
+  "response": "{\"sub_queries\": [\"Oh\", \"I bought it abroad, does that change anything\"]}",
+  "source": "offline"
+}
