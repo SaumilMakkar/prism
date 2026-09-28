@@ -66,17 +66,41 @@ def _get_nlp():
     return _NLP
 
 
+_ANCHOR_STOPWORDS = {
+    "the", "a", "an", "is", "it", "to", "in", "on", "of", "for", "and", "or",
+    "with", "at", "my", "i", "you", "your", "this", "that", "does", "do",
+    "how", "what", "when", "where", "why", "will", "not", "be", "am", "are",
+    "was", "were", "have", "has", "had", "can", "could", "would", "should",
+    "still", "even", "also", "just", "all", "after", "before", "please",
+}
+
+
 def extract_entities(text: str) -> tuple[str, ...]:
     nlp = _get_nlp()
     doc = nlp(text)
     ents = getattr(doc, "ents", ())
     if ents:
         return tuple(ent.text for ent in ents)
-    # spacy.blank has no NER pipe; fall back to capitalized-token heuristic
-    # so the feature is never silently empty in a minimal environment.
-    return tuple(
-        tok for tok in text.split() if tok[:1].isupper() and len(tok) > 2
-    )
+
+    # spacy.blank has no NER pipe (the ML_BACKEND=hash default, and any
+    # environment without en_core_web_sm downloaded). Real support
+    # transcripts are mostly lowercase common nouns ("my phone won't power
+    # on") rather than proper nouns, so a capitalized-token-only fallback
+    # would find no anchor for the large majority of real utterances and
+    # leave the controller stuck on NO_STABLE_ENTITY forever. Fall back to
+    # any non-stopword content word instead — capitalized tokens (likely
+    # proper nouns, e.g. "Galaxy") are still preferred when present.
+    capitalized = [tok.strip(".,!?;:") for tok in text.split() if tok[:1].isupper() and len(tok) > 2]
+    if capitalized:
+        return tuple(capitalized)
+
+    content_words = [
+        tok.strip(".,!?;:").lower()
+        for tok in text.split()
+        if len(tok.strip(".,!?;:")) >= 4 and tok.strip(".,!?;:").isalpha()
+        and tok.strip(".,!?;:").lower() not in _ANCHOR_STOPWORDS
+    ]
+    return tuple(content_words)
 
 
 def extract_all(
