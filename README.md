@@ -10,14 +10,14 @@ Samsung PRISM Gen AI Hackathon 3.0 · Theme 4. See [documentation/prelude.md](do
 
 | Gate | Description | Internal target | Result |
 |---|---|---|---|
-| G1 | Reproducibility | 90 | pending first `make eval` run |
-| G2 | Early retrieval | ≥ 80% | pending first `make eval` run |
-| G3 | Multi-intent handling | ≥ 70% | pending first `make eval` run |
-| G4 | Citation support, zero fabricated IDs | ≥ 85%, 0 | pending first `make eval` run |
-| G5 | Verified session continuity | — | pending first `make eval` run |
-| G6 | Trace coverage | 100% | pending first `make eval` run |
+| G1 | Reproducibility | 90 | 100.0 ✔ |
+| G2 | Early retrieval | ≥ 80% | 100.0 ✔ |
+| G3 | Multi-intent handling | ≥ 70% | 100.0 ✔ |
+| G4 | Citation support, zero fabricated IDs | ≥ 85%, 0 | 100.0 ✔ |
+| G5 | Verified session continuity | — | 100.0 ✔ |
+| G6 | Trace coverage | 100% | 100.0 ✔ |
 
-Full detail: [evaluation/results/scorecard.md](evaluation/results/scorecard.md).
+Measured by running all four Python services directly (`ML_BACKEND=hash`, `AI_MODE=offline` — no Docker, no API key) against the 7 sample streams in `evaluation/streams/`, not yet through `docker compose`/`make eval` end-to-end. Real end-to-end testing this way caught and fixed three actual bugs (a citation-ID collision that let a superseded document corrupt retrieval ranking, a hash-chain that broke on service restart, and an entity-extraction fallback that never fired on lowercase transcript text) — see git history. Full detail: [evaluation/results/scorecard.md](evaluation/results/scorecard.md).
 
 ## What this is
 
@@ -49,7 +49,7 @@ See [documentation/VIDEO_SCRIPT.md](documentation/VIDEO_SCRIPT.md) for the timed
 ## Running Evaluations
 
 ```
-make eval          # replay mode, no API key
+make eval          # offline mode (default), no API key
 make eval MODE=live
 make test           # unit tests across packages/core and all services
 ```
