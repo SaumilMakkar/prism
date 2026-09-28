@@ -10,10 +10,11 @@ Two independent problems: (1) which model handles decomposition and synthesis, a
 
 **Model choice:** GPT-5.6 Luna for the two latency-sensitive, quality-sensitive calls in the live path — multi-intent decomposition (F2) and claim synthesis (F5). GPT-5 nano, called once per document via the Batch API, for generating the contextual ingestion prefix (F4) — this call is off the live path entirely (one-time, at ingestion) so it is priced and latency-budgeted separately from everything in the Section 5 latency table.
 
-**Record/replay:** `ai-service` runs in one of three modes, switched by env var:
+**Record/replay:** `ai-service` runs in one of four modes, switched by env var:
 - `live` — real API calls, used during development and for the actual judged demo.
 - `record` — real API calls, with the request/response pair written to `trajectories/` (F16), used when building out the evaluation streams and the demo script.
-- `replay` — no network call; responses are served from committed `trajectories/` files matched by request hash. This is what `make eval` and `make eval-replay` use by default, and what CI runs — no OpenAI key required (Section 6: "`make eval` replays without a key").
+- `offline` — **the default.** No network call and no API key; a deterministic, dependency-free heuristic provider (`services/ai-service/app/providers/offline_provider.py`) implements the same decompose/synthesize JSON contracts a real model would. Also writes to `trajectories/`, tagged `source: offline`, so it can never be confused with a genuine API recording. This is what makes the Section 6 claim ("`make eval` runs offline, on a plane, with no API key") true from a completely clean clone — `replay` alone could not deliver that until a `record` pass had already populated `trajectories/`, which was a circular requirement for a fresh checkout.
+- `replay` — no network call; responses are served from committed `trajectories/` files matched by request hash, failing loudly (HTTP 424) on any miss rather than falling back. Used once `trajectories/` is populated (by `record` or `offline` runs) for fully deterministic re-runs, e.g. in CI.
 
 Recorded trajectories are committed to the repo as real recordings of live calls, never hand-written — this is stated explicitly in the AI Disclosure draft (Section 11, "Other" line) because a hand-written trajectory pretending to be a model response would be exactly the kind of thing an AI-code check is designed to catch.
 

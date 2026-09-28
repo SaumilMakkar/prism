@@ -17,7 +17,7 @@ See `diagrams/architecture.svg`. Five services behind an nginx edge:
 - **gateway** — controller (trigger policy), orchestration, session-scoped claim graph, telemetry aggregation, security.
 - **ml-service** — embedding (bge-small), feature extraction (entities/drift/clause boundary), reranking (MiniLM cross-encoder), NLI entailment.
 - **vector-service** — ingestion, section-aware chunking, hybrid search (BM25 + Qdrant dense, RRF fusion).
-- **ai-service** — LLM provider adapter (decompose, synthesize), live/record/replay modes, cost metering.
+- **ai-service** — LLM provider adapter (decompose, synthesize), live/record/offline/replay modes, cost metering.
 - **eval-runner** — stream playback and scorecard generation, eval compose profile only.
 
 Plus Redis (session state, 30-minute TTL) and Qdrant (dense index). Full boundary justification and measured hop costs (1–3 ms): [ADR-0001](adr/0001-service-boundaries.md). `docker compose up` brings up all seven components with healthchecks in ≤ 90 s.
@@ -29,7 +29,7 @@ Plus Redis (session state, 30-minute TTL) and Qdrant (dense index). Full boundar
 - **Claim-based synthesis and subtractive verification** — every claim carries a citation and a verbatim quote; a verifier can only reject (ID allow-list → quote match → NLI entailment), never edit. Unsupported claims move to `uncertainty`. [ADR-0005](adr/0005-grounding-verifier.md).
 - **Versioned claim graph** — the answer is a set of versioned claims in Redis, keyed by session id; new details trigger targeted delta retrieval against only the affected claims, rendered as a diff (unchanged/added/superseded). [ADR-0004](adr/0004-claim-graph-state.md).
 - **Security** — threat model T1–T10, layered nginx/HMAC/redaction/TTL/CI controls; grounding verifier doubles as the prompt-injection backstop. [ADR-0006](adr/0006-security-layer.md) and `SECURITY.md`.
-- **LLM usage and reproducibility** — GPT-5.6 Luna for decompose/synthesize, GPT-5 nano (Batch) for one-time ingestion prefixes; live/record/replay modes mean `make eval` runs with no API key. [ADR-0007](adr/0007-llm-choice-and-replay.md).
+- **LLM usage and reproducibility** — GPT-5.6 Luna for decompose/synthesize, GPT-5 nano (Batch) for one-time ingestion prefixes; live/record/offline/replay modes mean `make eval` runs with no API key by default. [ADR-0007](adr/0007-llm-choice-and-replay.md).
 
 ## 5. Gates and internal targets
 
