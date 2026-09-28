@@ -29,7 +29,7 @@
     "hybrid_flag": { "type": "boolean" },
     "latency_ms": { "type": "number" },
     "sub_queries": { "type": "array", "items": { "type": "string" } },
-    "source": { "type": "string", "enum": ["live", "record", "replay"] },
+    "source": { "type": "string", "enum": ["live", "record", "offline", "replay"] },
     "claim_id": { "type": "string" },
     "status": { "type": "string", "enum": ["verified", "uncertainty"] },
     "added": { "type": "array", "items": { "type": "string" } },
@@ -40,7 +40,9 @@
     "cumulative_session_usd": { "type": "number" },
     "event_id": { "type": "string" },
     "prev_hash": { "type": "string" },
-    "hash": { "type": "string" }
+    "hash": { "type": "string" },
+    "sub_query": { "type": "string" },
+    "citation_id": { "type": ["string", "null"] }
   },
   "additionalProperties": true
 }
