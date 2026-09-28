@@ -19,11 +19,20 @@ def ingest_corpus(
     embed_fn: EmbedFn,
     dense_index: DenseIndex | None = None,
 ) -> tuple[list[Chunk], BM25Index]:
-    chunks = chunk_corpus(corpus_dir)
+    all_chunks = chunk_corpus(corpus_dir)
+
+    # A superseded document version shares its doc_id and section numbers
+    # with the current version (by design — see corpus/POL_004_warranty_return_v1.md
+    # vs v2), so their citation_ids collide. Indexing both would silently
+    # double-count that citation_id in RRF fusion (ADR-0002) and make the
+    # id -> chunk lookup ambiguous for the verifier (ADR-0005). Superseded
+    # chunks stay in the corpus as a fixture but are never retrievable as
+    # current evidence.
+    chunks = [c for c in all_chunks if c.status != "superseded"]
     bm25 = BM25Index(chunks)
 
     if dense_index is not None and chunks:
         vectors = embed_fn([c.text for c in chunks])
         dense_index.upsert(chunks, vectors)
 
-    return chunks, bm25
+    return chunks, bm25  # only the indexed (non-superseded) chunks
