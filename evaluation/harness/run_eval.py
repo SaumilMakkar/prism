@@ -9,6 +9,14 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+try:
+    # Windows consoles default to a codepage (e.g. cp1252) that can't encode
+    # the U+2714/U+2718 marks below; force UTF-8 so `make eval` prints
+    # cleanly on Windows too, not just Linux/macOS.
+    sys.stdout.reconfigure(encoding="utf-8")
+except AttributeError:
+    pass
+
 from client import GatewayClient
 from scoring import Scorecard, TurnResult, build_scorecard
 from streams import Stream, load_streams
@@ -71,7 +79,9 @@ def render_scorecard_md(scorecard: Scorecard, stream_count: int) -> str:
         "## Headroom",
         "",
         f"Mean gap (fired chunk index − offline-safe chunk index): "
-        f"{scorecard.headroom_mean_chunks if scorecard.headroom_mean_chunks is not None else 'n/a'}",
+        f"{scorecard.headroom_mean_chunks:.2f}"
+        if scorecard.headroom_mean_chunks is not None
+        else "Mean gap (fired chunk index − offline-safe chunk index): n/a",
         "",
         "## False-positive rate (no_evidence streams incorrectly verified)",
         "",
@@ -80,7 +90,7 @@ def render_scorecard_md(scorecard: Scorecard, stream_count: int) -> str:
         "## How to regenerate",
         "",
         "```",
-        "make eval          # replay mode, no API key",
+        "make eval          # offline mode (default) or replay, no API key",
         "make eval MODE=live",
         "```",
     ]
