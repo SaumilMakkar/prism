@@ -7,12 +7,12 @@ This folder is named after the winner's judge-facing folder (`prelude.md` Sectio
 ## What `make eval` does
 
 1. Loads labelled streams from `evaluation/streams/*/` (see labelling below).
-2. Runs the harness (`evaluation/harness/`) against the running services in `replay` mode by default (no API key needed — [ADR-0007](../documentation/adr/0007-llm-choice-and-replay.md)), or `live` mode with `make eval MODE=live`.
+2. Runs the harness (`evaluation/harness/`) against the running services in `offline` mode by default (deterministic, no API key needed — [ADR-0007](../documentation/adr/0007-llm-choice-and-replay.md)); `make eval MODE=replay` serves committed trajectories and fails loudly on a miss instead, and `make eval MODE=live` hits the real OpenAI API.
 3. Computes G1–G6 against internal targets, plus NDCG@5/recall@k for retrieval, RAGAS-style faithfulness/relevance for synthesis, and the stabilisation-headroom metric for G2.
 4. Prints a scorecard to the terminal with ✔/✘ per gate and a one-line interpretation per gate (the winner's pattern — see `prelude.md` Section 8).
-5. Writes `evaluation/results/scorecard.md`. A CI test recomputes the README's top-line scorecard from this file, so a stale number fails the build.
+5. Writes `evaluation/results/scorecard.md`. `.github/workflows/ci.yml`'s `readme-sync` job recomputes the README's top-line scorecard from this file, so a stale number fails the build.
 
-`make eval-replay` is the explicit no-key variant used for judges and CI. `make bench` produces the latency table separately (per-stage timing, not gate scoring).
+`make eval MODE=replay` is the explicit no-key, fully-deterministic variant intended for judges and CI once `trajectories/` is populated. `make bench` produces the latency table separately (per-stage timing, not gate scoring).
 
 ## Stream labelling
 
@@ -27,7 +27,7 @@ Each subfolder under `evaluation/streams/` holds one query category, as timestam
 | `noise/` | Disfluencies, false starts, self-corrections ("Pune… actually Mumbai") | G2, controller robustness |
 | `presentation/` | "Say that again, shorter" and similar re-render requests | No-retrieval / F8 correctness |
 
-40+ streams total across these categories, built by the team — no eval query, answer, or Doc_ID appears anywhere under `services/`; CI greps for this on every push ([SECURITY.md](../documentation/SECURITY.md) T8).
+7 streams across these categories as of this writing (one per category above), built by the team — no eval query, answer, or Doc_ID appears anywhere under `services/`; CI greps for this on every push ([SECURITY.md](../documentation/SECURITY.md) T8). `documentation/prelude.md`'s 40-60 figure was the original target scale; expanding coverage per category is tracked as follow-up work, not yet done.
 
 ## Ablations (always run alongside the main scorecard)
 

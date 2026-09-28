@@ -16,11 +16,11 @@ Measure whether Prelude's speculative retrieval, hybrid search, claim-based synt
 
 ## 3. Dataset
 
-Demo corpus: 40–60 sectioned markdown documents — Galaxy device troubleshooting, warranty and return policy (two versions, one superseded), SmartThings setup, service-centre SLAs, one section with intentionally no coverage, one injected adversarial chunk. Generated, then hand-checked by the team (`prelude.md` Section 1). Judges bring their own corpus for scoring; this dataset is what the team's own numbers in this report are computed against.
+Demo corpus: 6 sectioned markdown documents (~20 retrievable sections) — Galaxy device troubleshooting, warranty and return policy (two versions, one superseded), SmartThings setup, service-centre SLAs, one section with intentionally no coverage, one injected adversarial chunk. Generated, then hand-checked by the team (`prelude.md` Section 1). `prelude.md`'s original 40-60 target is aspirational scale, not yet reached. Judges bring their own corpus for scoring; this dataset is what the team's own numbers in this report are computed against.
 
 ## 4. Query categories
 
-`simple`, `compound`, `late_detail`, `no_evidence`, `noise`, `presentation` — see `evaluation/README.md` for what each tests and which gate it maps to. 40+ streams total.
+`simple`, `compound`, `late_detail`, `no_evidence`, `noise`, `presentation` — see `evaluation/README.md` for what each tests and which gate it maps to. 7 streams total as of this writing.
 
 ## 5. Metrics
 
