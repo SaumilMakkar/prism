@@ -53,7 +53,7 @@ services:
       context: .
       dockerfile: services/ai-service/Dockerfile
     environment:
-      AI_MODE: ${AI_MODE:-replay}
+      AI_MODE: ${AI_MODE:-offline}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       DECOMPOSE_MODEL: ${DECOMPOSE_MODEL:-gpt-5.6-luna}
       SYNTHESIZE_MODEL: ${SYNTHESIZE_MODEL:-gpt-5.6-luna}
