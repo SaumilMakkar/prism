@@ -1,6 +1,7 @@
 from app.features.features import (
     content_token_count,
     embedding_drift,
+    extract_entities,
     has_clause_boundary,
     is_presentation_turn,
 )
@@ -33,3 +34,23 @@ def test_embedding_drift_high_on_orthogonal_vectors():
 def test_embedding_drift_low_on_identical_vectors():
     drift = embedding_drift([1.0, 0.0], [1.0, 0.0])
     assert drift < 0.01
+
+
+def test_extract_entities_finds_content_anchor_in_lowercase_transcript():
+    # Real transcripts are mostly lowercase common nouns, not proper nouns —
+    # the fallback must not require capitalization to find an anchor.
+    entities = extract_entities("my phone will not power on at all")
+    assert "phone" in entities
+
+
+def test_extract_entities_prefers_capitalized_proper_nouns_when_present():
+    entities = extract_entities("My Galaxy phone will not power on")
+    assert "Galaxy" in entities
+    assert "phone" not in entities  # capitalized tokens take priority over content words
+
+
+def test_extract_entities_excludes_stopwords():
+    entities = extract_entities("what is the warranty period for this")
+    assert "warranty" in entities
+    assert "what" not in entities
+    assert "this" not in entities
