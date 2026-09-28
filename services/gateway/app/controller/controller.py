@@ -14,11 +14,18 @@ class SessionControllers:
     def __init__(self, ml_service_url: str) -> None:
         self.ml_service_url = ml_service_url
         self._policies: dict[str, RulePolicy] = {}
+        self._last_entities: dict[str, tuple[str, ...]] = {}
 
     def _policy_for(self, session_id: str) -> RulePolicy:
         if session_id not in self._policies:
             self._policies[session_id] = RulePolicy()
         return self._policies[session_id]
+
+    def entities_for(self, session_id: str) -> list[str]:
+        """Entities observed on the most recent chunk for this session — F2's
+        "carries session entities" reads this after each controller decision.
+        """
+        return list(self._last_entities.get(session_id, ()))
 
     def fetch_features(self, session_id: str, chunk_index: int, text: str) -> ChunkFeatures:
         with httpx.Client(timeout=10.0) as client:
@@ -39,4 +46,6 @@ class SessionControllers:
 
     def decide(self, session_id: str, chunk_index: int, text: str, trace_id: str) -> ControllerDecision:
         features = self.fetch_features(session_id, chunk_index, text)
+        if features.entities:
+            self._last_entities[session_id] = features.entities
         return self._policy_for(session_id).decide(features, trace_id=trace_id)
