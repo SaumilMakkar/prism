@@ -5,6 +5,7 @@ is a plain HTTP call to the service that owns that capability.
 """
 from __future__ import annotations
 
+import time
 import uuid
 
 import httpx
@@ -78,6 +79,7 @@ class Orchestrator:
     def process_chunk(self, session_id: str, session_id_hash: str, chunk_index: int, text: str) -> dict:
         trace_id = str(uuid.uuid4())
 
+        t0 = time.perf_counter()
         decision = self.controllers.decide(session_id, chunk_index, text, trace_id)
         self.telemetry.emit(
             "controller_decision",
@@ -86,6 +88,7 @@ class Orchestrator:
             decision=decision.decision.value,
             reason_code=decision.reason_code,
             chunk_index=chunk_index,
+            latency_ms=round((time.perf_counter() - t0) * 1000, 1),
         )
 
         if decision.decision == Decision.NO_RETRIEVAL:
@@ -98,13 +101,20 @@ class Orchestrator:
             return self._response(trace_id, decision, claims, ClaimDiff())
 
         # RETRIEVE
+        t0 = time.perf_counter()
         sub_queries, decompose_source = self._decompose(session_id, text)
         self.telemetry.emit(
-            "decompose_completed", trace_id, session_id_hash, sub_queries=sub_queries, source=decompose_source
+            "decompose_completed",
+            trace_id,
+            session_id_hash,
+            sub_queries=sub_queries,
+            source=decompose_source,
+            latency_ms=round((time.perf_counter() - t0) * 1000, 1),
         )
 
         all_claims: list[Claim] = []
         for sub_query in sub_queries:
+            t0 = time.perf_counter()
             evidence = self._search(sub_query)
             self.telemetry.emit(
                 "retrieval_completed",
@@ -112,14 +122,25 @@ class Orchestrator:
                 session_id_hash,
                 doc_ids=[h.citation_id for h in evidence],
                 hybrid_flag=True,
+                sub_query=sub_query,
+                latency_ms=round((time.perf_counter() - t0) * 1000, 1),
             )
 
+            t0 = time.perf_counter()
             proposed_claims, synth_source = self._synthesize(session_id, sub_query, evidence)
             self.telemetry.emit(
-                "synthesis_completed", trace_id, session_id_hash, claim_ids=[c.claim_id for c in proposed_claims], source=synth_source
+                "synthesis_completed",
+                trace_id,
+                session_id_hash,
+                claim_ids=[c.claim_id for c in proposed_claims],
+                source=synth_source,
+                sub_query=sub_query,
+                latency_ms=round((time.perf_counter() - t0) * 1000, 1),
             )
 
+            t0 = time.perf_counter()
             verified_claims = verify_claims(proposed_claims, evidence, self._nli)
+            verify_latency_ms = round((time.perf_counter() - t0) * 1000, 1)
             for claim in verified_claims:
                 self.telemetry.emit(
                     "claim_verified",
@@ -128,6 +149,8 @@ class Orchestrator:
                     claim_id=claim.claim_id,
                     status=claim.status.value,
                     reason_code=claim.reason_code,
+                    citation_id=claim.citation_id,
+                    latency_ms=verify_latency_ms,
                 )
             all_claims.extend(verified_claims)
 
