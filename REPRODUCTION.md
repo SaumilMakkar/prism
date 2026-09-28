@@ -10,7 +10,7 @@ cd prism
 cp .env.example .env
 ```
 
-Defaults in `.env.example` require no API key: `AI_MODE=replay`, `ML_BACKEND=hash`.
+Defaults in `.env.example` require no API key: `AI_MODE=offline`, `ML_BACKEND=hash`.
 
 ## 2. Bring the system up
 
@@ -36,7 +36,7 @@ http://localhost — send transcript chunks one at a time to see the controller 
 make eval
 ```
 
-Runs every stream under `evaluation/streams/` against the live gateway in `replay` mode (no API key needed — [ADR-0007](documentation/adr/0007-llm-choice-and-replay.md)), scores G1–G6, and writes `evaluation/results/scorecard.md`.
+Runs every stream under `evaluation/streams/` against the live gateway in `offline` mode by default (deterministic, no API key needed — [ADR-0007](documentation/adr/0007-llm-choice-and-replay.md)), scores G1–G6, and writes `evaluation/results/scorecard.md`. Set `AI_MODE=replay` to instead serve committed trajectories and fail loudly (HTTP 424) on any cache miss, for fully deterministic CI runs once `trajectories/` is populated.
 
 To run in `live` mode against the real OpenAI API (requires `OPENAI_API_KEY` in `.env`):
 
@@ -70,9 +70,9 @@ AI_MODE=record OPENAI_API_KEY=sk-... docker compose up ai-service
 make down
 ```
 
-Removes containers and the `telemetry` volume. `corpus/` and `evaluation/` are host-mounted and untouched.
+Removes containers and the `telemetry` volume. `evaluation/` is host-mounted (for `eval-runner`'s results) and untouched; `corpus/` is baked into the `vector-service` image at build time (see `services/vector-service/Dockerfile`), so a corpus change needs `make up` to rebuild, not just a restart.
 
 ## Known gaps in this environment
 
-- `trajectories/` ships empty — no LLM calls have been recorded yet, so `make eval` (replay mode) will surface `424 Replay Miss` until a `record` pass populates it. This is expected for a freshly scaffolded build, not a bug.
 - `ML_BACKEND=hash` (the default) uses a dependency-free deterministic embedder/reranker/NLI heuristic so `make up` works fully offline; set `ML_BACKEND=transformer` to use the real bge-small/MiniLM/NLI models described in the ADRs (requires a model download on first run).
+- `docker compose up` itself has not been run against this exact working tree on the machine used for this round of local development (Docker Desktop isn't installed there) — verified instead by running all four Python services directly with `uvicorn` against the same code, same corpus, and `ML_BACKEND=hash`/`AI_MODE=offline`, which exercises every code path `docker compose` would except the container build and nginx routing. `.github/workflows/ci.yml`'s `compose-smoke` job now builds and starts the real compose stack (including nginx) and drives one full turn through it on every push — that job is what actually verifies `make up` works, not this write-up.
