@@ -13,11 +13,15 @@ down:
 ingest:
 	curl -sf -X POST http://localhost:8002/ingest || true
 
-eval:
-	docker compose --profile eval run --rm eval-runner
+# `make eval` (offline, default) | `make eval MODE=replay` | `make eval MODE=live`.
+# ai-service is recreated with the requested AI_MODE before each run, since
+# it's a long-lived container started by `make up`, not something the
+# eval-runner itself controls.
+MODE ?= offline
 
-eval-replay:
-	AI_MODE=replay docker compose --profile eval run --rm eval-runner
+eval:
+	AI_MODE=$(MODE) docker compose up -d --no-deps ai-service
+	docker compose --profile eval run --rm eval-runner
 
 bench:
 	@echo "Per-stage latency benchmark — see documentation/Architecture_Brief.md Section 6."
