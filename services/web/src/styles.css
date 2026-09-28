@@ -1,0 +1,94 @@
+:root {
+  --bg: #0f1115;
+  --panel: #171a21;
+  --border: #2a2f3a;
+  --text: #e6e8ec;
+  --muted: #8a90a0;
+  --wait: #d9a441;
+  --retrieve: #4caf7d;
+  --no-retrieval: #6d7280;
+  --verified: #4caf7d;
+  --uncertainty: #d9534f;
+  --added: #4caf7d;
+  --superseded: #6d7280;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, Segoe UI, Roboto, sans-serif;
+}
+
+.app {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+h1 { font-size: 20px; margin-bottom: 4px; }
+.subtitle { color: var(--muted); margin-bottom: 24px; font-size: 13px; }
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+textarea {
+  width: 100%;
+  min-height: 70px;
+  background: #0c0e12;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px;
+  font-family: inherit;
+}
+
+button {
+  background: #2d3340;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 14px;
+  cursor: pointer;
+  margin-top: 8px;
+}
+button:hover { background: #383f50; }
+
+.lamp-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.lamp { width: 12px; height: 12px; border-radius: 50%; }
+.lamp.wait { background: var(--wait); }
+.lamp.retrieve { background: var(--retrieve); }
+.lamp.no_retrieval { background: var(--no-retrieval); }
+
+.reason-code { font-family: monospace; color: var(--muted); font-size: 12px; }
+
+.claim {
+  border-left: 3px solid var(--border);
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  border-radius: 4px;
+  background: #12151b;
+}
+.claim.added { border-left-color: var(--added); }
+.claim.superseded { border-left-color: var(--superseded); text-decoration: line-through; opacity: 0.6; }
+.claim.unchanged { border-left-color: var(--border); opacity: 0.85; }
+
+.status-badge {
+  display: inline-block;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 8px;
+}
+.status-badge.verified { background: rgba(76,175,125,0.2); color: var(--verified); }
+.status-badge.uncertainty { background: rgba(217,83,79,0.2); color: var(--uncertainty); }
+
+.citation { color: var(--muted); font-size: 12px; margin-top: 4px; }
+.quote { color: var(--muted); font-size: 12px; font-style: italic; }

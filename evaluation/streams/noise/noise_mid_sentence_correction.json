@@ -1,0 +1,9 @@
+{
+  "chunks": [
+    "I'm calling about a device I bought in Pune,",
+    "actually sorry, it was Mumbai,",
+    "and it won't charge properly."
+  ],
+  "expected_safe_chunk_index": 2,
+  "expected_relevant_doc_ids": ["KB_012 §3.1"]
+}

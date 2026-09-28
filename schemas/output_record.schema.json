@@ -1,0 +1,18 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://prelude.local/schemas/output_record.schema.json",
+  "title": "Prelude claim (answer unit)",
+  "type": "object",
+  "required": ["claim_id", "text", "status", "version"],
+  "properties": {
+    "claim_id": { "type": "string" },
+    "text": { "type": "string" },
+    "citation_id": { "type": ["string", "null"], "pattern": "^.+ §.+$" },
+    "quote": { "type": ["string", "null"] },
+    "status": { "type": "string", "enum": ["verified", "uncertainty"] },
+    "reason_code": { "type": ["string", "null"] },
+    "version": { "type": "integer", "minimum": 1 },
+    "sub_intent": { "type": ["string", "null"] }
+  },
+  "additionalProperties": false
+}

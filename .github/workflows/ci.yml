@@ -1,0 +1,92 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install prism-core
+        run: |
+          cd packages/core
+          python -m pip install -e ".[dev]"
+
+      - name: Test packages/core
+        run: cd packages/core && python -m pytest -q
+
+      - name: Test gateway
+        run: |
+          cd services/gateway
+          python -m pip install -q -r requirements.txt --no-deps || true
+          python -m pip install -q fastapi httpx redis pydantic pytest pytest-asyncio
+          python -m pytest -q
+
+      - name: Test ml-service
+        run: |
+          cd services/ml-service
+          python -m pip install -q fastapi pydantic pytest
+          python -m pytest -q
+
+      - name: Test vector-service
+        run: |
+          cd services/vector-service
+          python -m pip install -q rank-bm25 python-frontmatter pydantic pytest
+          python -m pytest -q
+
+      - name: Test ai-service
+        run: |
+          cd services/ai-service
+          python -m pip install -q fastapi pydantic pytest
+          python -m pytest -q
+
+      - name: Test evaluation harness scoring
+        run: |
+          cd evaluation/harness
+          python -m pip install -q pytest
+          python -m pytest -q
+
+  hardcode-grep:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: No eval query/answer/Doc_ID literals under services/
+        run: |
+          set -e
+          if grep -rEn "camera lens glass|Doc_999.*ignore evidence" services/ --include="*.py"; then
+            echo "Hardcoded eval content found under services/ — this is disqualifying per the guide."
+            exit 1
+          fi
+          echo "OK — no hardcoded eval content found."
+
+  schema-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Validate JSON Schemas are well-formed
+        run: |
+          python -m pip install -q jsonschema
+          python -c "
+          import json, glob
+          for path in glob.glob('schemas/*.json'):
+              json.load(open(path, encoding='utf-8'))
+              print('OK', path)
+          "
+
+  web-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: cd services/web && npm install && npm run build
