@@ -29,6 +29,26 @@ def test_record_then_replay_round_trips(tmp_path):
     assert replay_source == "replay"
 
 
+def test_offline_mode_records_and_tags_source(tmp_path):
+    class FakeOfflineProvider:
+        def complete(self, system, user, model):
+            return '{"sub_queries": ["q1"]}'
+
+    offline = ReplayingProvider(provider=FakeOfflineProvider(), mode="offline")
+    offline._trajectory_path = lambda key: tmp_path / f"{key}.json"
+    response, source = offline.complete("sys", "usr", "model-x")
+    assert source == "offline"
+
+    saved = tmp_path / f"{request_hash('sys', 'usr', 'model-x')}.json"
+    assert saved.exists()
+
+    replayer = ReplayingProvider(provider=None, mode="replay")
+    replayer._trajectory_path = lambda key: tmp_path / f"{key}.json"
+    replayed, replay_source = replayer.complete("sys", "usr", "model-x")
+    assert replayed == response
+    assert replay_source == "replay"
+
+
 def test_request_hash_is_stable_for_same_inputs():
     assert request_hash("a", "b", "c") == request_hash("a", "b", "c")
     assert request_hash("a", "b", "c") != request_hash("a", "b", "d")

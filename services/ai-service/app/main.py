@@ -8,15 +8,26 @@ from pydantic import BaseModel
 
 from app.cost.cost import CostCeilingExceeded, CostMeter
 from app.decompose.decompose import decompose
+from app.providers.offline_provider import OfflineProvider
 from app.providers.openai_provider import DECOMPOSE_MODEL, SYNTHESIZE_MODEL, OpenAIProvider
 from app.replay.replay import ReplayMissError, ReplayingProvider
 from app.synthesize.synthesize import synthesize
 
-MODE = os.environ.get("AI_MODE", "replay")  # live | record | replay
+# live: real OpenAI calls. record: real calls, saved to trajectories/.
+# offline (default): deterministic, no-network, no-key provider — also
+# saved to trajectories/, tagged source=offline, so `make up`/`make eval`
+# work with zero setup (ADR-0007). replay: never touches the network,
+# serves a committed trajectory by hash, fails loudly on a miss.
+MODE = os.environ.get("AI_MODE", "offline")
 
 app = FastAPI(title="ai-service")
 
-_provider = OpenAIProvider() if MODE in ("live", "record") else None
+if MODE in ("live", "record"):
+    _provider = OpenAIProvider()
+elif MODE == "offline":
+    _provider = OfflineProvider()
+else:
+    _provider = None
 _replaying = ReplayingProvider(_provider, mode=MODE)
 _cost_meter = CostMeter()
 
@@ -76,8 +87,8 @@ def cost(session_id: str) -> dict:
 
 
 def _meter(session_id: str, input_text: str, output) -> None:
-    if MODE == "replay":
-        return  # replay calls are free by definition — no network, no charge
+    if MODE in ("replay", "offline"):
+        return  # neither mode touches the network — nothing to charge
     input_tokens = max(1, len(input_text.split()))
     output_tokens = max(1, len(str(output).split()))
     try:

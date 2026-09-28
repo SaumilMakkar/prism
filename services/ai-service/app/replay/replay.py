@@ -1,4 +1,4 @@
-"""live / record / replay modes — ADR-0007.
+"""live / record / offline / replay modes — ADR-0007.
 
 `replay` never calls the network: it serves a committed trajectory by
 request hash and fails loudly on a miss, so a stale trajectory set is caught
@@ -54,14 +54,19 @@ class ReplayingProvider:
 
         response = self.provider.complete(system, user, model)
 
-        if self.mode == "record":
+        if self.mode in ("record", "offline"):
             path.write_text(
                 json.dumps(
-                    {"system": system, "user": user, "model": model, "response": response},
+                    {
+                        "system": system,
+                        "user": user,
+                        "model": model,
+                        "response": response,
+                        "source": self.mode,
+                    },
                     indent=2,
                 ),
                 encoding="utf-8",
             )
-            return response, "record"
 
-        return response, "live"
+        return response, self.mode
