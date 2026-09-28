@@ -11,7 +11,7 @@ Measure whether Prelude's speculative retrieval, hybrid search, claim-based synt
 ## 2. Setup
 
 - Services run via `docker compose --profile eval up`.
-- Harness: `evaluation/harness/`, executed via `make eval` (replay mode, no API key) or `make eval MODE=live`.
+- Harness: `evaluation/harness/`, executed via `make eval` (offline mode by default — deterministic, no API key) or `make eval MODE=live`.
 - Hardware/environment: *(fill in at benchmark time — CPU, RAM, whether run in CI or locally)*.
 
 ## 3. Dataset
