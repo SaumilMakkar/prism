@@ -9,6 +9,7 @@ COPY evaluation/harness ./harness
 COPY evaluation/streams /evaluation/streams
 COPY evaluation/results /evaluation/results
 
+ENV STREAMS_DIR=/evaluation/streams
 WORKDIR /app/harness
 # --output targets the bind mount (docker-compose.yml: ./evaluation/results),
 # so the scorecard lands in the repo, not in the container's own copy.

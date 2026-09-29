@@ -17,7 +17,7 @@ Samsung PRISM Gen AI Hackathon 3.0 · Theme 4. See [documentation/prelude.md](do
 | G5 | Verified session continuity | — | 100.0 ✔ |
 | G6 | Trace coverage | 100% | 100.0 ✔ |
 
-Measured by running all four Python services directly (`ML_BACKEND=hash`, `AI_MODE=offline` — no Docker, no API key) against the 7 sample streams in `evaluation/streams/`, not yet through `docker compose`/`make eval` end-to-end. Real end-to-end testing this way caught and fixed three actual bugs (a citation-ID collision that let a superseded document corrupt retrieval ranking, a hash-chain that broke on service restart, and an entity-extraction fallback that never fired on lowercase transcript text) — see git history. Full detail: [evaluation/results/scorecard.md](evaluation/results/scorecard.md).
+Measured on 2026-09-29 by `make eval` through the full `docker compose` stack (`ML_BACKEND=hash`, `AI_MODE=offline` — no API key) against the 7 labelled streams in `evaluation/streams/`, driven through nginx exactly as the dashboard is. Real end-to-end testing this way caught and fixed three actual bugs (a citation-ID collision that let a superseded document corrupt retrieval ranking, a hash-chain that broke on service restart, and an entity-extraction fallback that never fired on lowercase transcript text) — see git history. Full detail: [evaluation/results/scorecard.md](evaluation/results/scorecard.md).
 
 ## What this is
 
