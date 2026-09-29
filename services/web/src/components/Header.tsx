@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Connection } from "../store";
 import { HealthResponse } from "../types";
+import { ThemeMenu } from "./ThemeMenu";
 
 /** Same hash the gateway uses for telemetry (sha256, first 16 hex chars —
  * services/gateway/app/security/security.py), so the id shown here is the
@@ -99,7 +100,8 @@ export function Header({
             <span className="badge">ml {health.ml_backend ?? "unknown"}</span>
           </>
         )}
-        <span className={`badge ${connection === "ok" ? "badge-ok" : connection === "down" ? "badge-down" : ""}`}>
+        <span className={`badge badge-dot ${connection === "ok" ? "badge-ok" : connection === "down" ? "badge-down" : ""}`}>
+          <span className="dot" aria-hidden="true" />
           {gatewayLabel}
         </span>
         {remainingMs !== null && (
@@ -112,11 +114,12 @@ export function Header({
         <span className="cost" title="Cumulative LLM spend this session, from ai-service's cost meter">
           cost ${cost.toFixed(4)}
         </span>
-        <button className="btn-quiet" onClick={onTour} title="Guided tour (T)">
-          Tour
-        </button>
+        <ThemeMenu />
         <button className={`btn-quiet ${micActive ? "btn-active" : ""}`} onClick={onMic} title="Toggle mic (M)">
           {micActive ? "Mic on" : "Mic"}
+        </button>
+        <button className="btn-primary" onClick={onTour} title="Guided tour (T)">
+          Tour
         </button>
       </div>
     </header>

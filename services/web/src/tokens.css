@@ -1,18 +1,78 @@
-:root {
-  /* Two materials: dark transcript band, light everything else. */
+/* Design tokens. Every colour on the page comes from here; components never
+   use a literal. Themes only redefine the variables below — layout, type
+   scale, radii and the four permitted motions are shared.
+
+   "Light" is the original brief's two-material design (dark transcript band
+   on a console-white page). "Mission Control" (default) and the other dark
+   appearances were added at the team's request — see DESIGN.md,
+   "Appearance themes and the edge treatment". */
+
+:root,
+:root[data-theme="mission-control"] {
+  --bg: #0b0e13;             /* page */
+  --surface: #12161d;        /* cards, panels, drawer */
+  --surface-2: #171c25;      /* input fields, hover rows */
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --edge: rgba(255, 255, 255, 0.22);   /* the 1px top-edge highlight on cards */
+  --glow: rgba(79, 140, 255, 0.28);    /* accent glow behind primary actions */
+
+  --ink: #0f1319;            /* transcript band — still the darkest surface */
+  --ink-text: #f2f4f7;
+  --ink-muted: #8b94a3;
+  --ink-border: rgba(255, 255, 255, 0.08);
+  --ink-glow: rgba(79, 140, 255, 0.16);
+
+  --text: #e6e9ef;
+  --text-muted: #8b94a3;
+
+  --accent: #4f8cff;
+  --accent-text: #ffffff;
+
+  --wait: #d9a441;
+  --no-retrieval: #8b94a3;
+  --supported: #3ecf8e;
+  --dropped: #f0625d;
+  --uncertain: #a78bfa;
+
+  --added-bg: rgba(62, 207, 142, 0.10);
+  --superseded-bg: rgba(240, 98, 93, 0.10);
+  --mark-bg: rgba(217, 164, 65, 0.28);
+
+  --font-sans: "IBM Plex Sans", -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+
+  --radius-chip: 4px;
+  --radius-card: 6px;
+  --radius-drawer: 8px;
+
+  --motion-fast: 150ms;
+  --motion-med: 200ms;
+
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  --bg: #f3f4f2;
+  --surface: #ffffff;
+  --surface-2: #e8eae6;
+  --border: #cfd3cc;
+  --border-strong: #b8bdb5;
+  --edge: rgba(255, 255, 255, 0.9);
+  --glow: rgba(47, 107, 255, 0.18);
+
   --ink: #1c232b;
-  --ink-caret: #ffffff;
-  --console-white: #f3f4f2;
-  --bench-grey: #e8eae6;
-  --rule: #cfd3cc;
+  --ink-text: #ffffff;
+  --ink-muted: #9aa2b1;
+  --ink-border: #2a323d;
+  --ink-glow: rgba(47, 107, 255, 0.12);
 
   --text: #1c232b;
   --text-muted: #6b7280;
 
-  /* One accent, spent in one place. */
   --accent: #2f6bff;
+  --accent-text: #ffffff;
 
-  /* Semantic, always paired with a glyph or word. */
   --wait: #b7791f;
   --no-retrieval: #6b7280;
   --supported: #1f7a4d;
@@ -21,15 +81,121 @@
 
   --added-bg: #e6f4ec;
   --superseded-bg: #fbeaea;
+  --mark-bg: #fff3c4;
 
-  --font-sans: "IBM Plex Sans", -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+  color-scheme: light;
+}
 
-  --radius-chip: 4px;
-  --radius-drawer: 8px;
+:root[data-theme="github-dark"] {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface-2: #1c2129;
+  --border: #30363d;
+  --border-strong: #444c56;
+  --edge: rgba(255, 255, 255, 0.18);
+  --glow: rgba(88, 166, 255, 0.28);
+  --ink: #010409;
+  --ink-text: #e6edf3;
+  --ink-muted: #8b949e;
+  --ink-border: #21262d;
+  --ink-glow: rgba(88, 166, 255, 0.14);
+  --text: #e6edf3;
+  --text-muted: #8b949e;
+  --accent: #58a6ff;
+  --accent-text: #0d1117;
+  --wait: #d29922;
+  --no-retrieval: #8b949e;
+  --supported: #3fb950;
+  --dropped: #f85149;
+  --uncertain: #bc8cff;
+  --added-bg: rgba(63, 185, 80, 0.12);
+  --superseded-bg: rgba(248, 81, 73, 0.12);
+  --mark-bg: rgba(210, 153, 34, 0.3);
+  color-scheme: dark;
+}
 
-  --motion-fast: 150ms;
-  --motion-med: 200ms;
+:root[data-theme="vscode-dark"] {
+  --bg: #1e1e1e;
+  --surface: #252526;
+  --surface-2: #2d2d30;
+  --border: #3c3c3c;
+  --border-strong: #505050;
+  --edge: rgba(255, 255, 255, 0.16);
+  --glow: rgba(0, 122, 204, 0.32);
+  --ink: #181818;
+  --ink-text: #d4d4d4;
+  --ink-muted: #858585;
+  --ink-border: #2b2b2b;
+  --ink-glow: rgba(0, 122, 204, 0.16);
+  --text: #d4d4d4;
+  --text-muted: #9d9d9d;
+  --accent: #3794ff;
+  --accent-text: #ffffff;
+  --wait: #cca700;
+  --no-retrieval: #9d9d9d;
+  --supported: #89d185;
+  --dropped: #f14c4c;
+  --uncertain: #c586c0;
+  --added-bg: rgba(137, 209, 133, 0.12);
+  --superseded-bg: rgba(241, 76, 76, 0.12);
+  --mark-bg: rgba(204, 167, 0, 0.3);
+  color-scheme: dark;
+}
+
+:root[data-theme="blueprint"] {
+  --bg: #0a1628;
+  --surface: #0f1f38;
+  --surface-2: #142847;
+  --border: rgba(120, 170, 255, 0.16);
+  --border-strong: rgba(120, 170, 255, 0.32);
+  --edge: rgba(160, 200, 255, 0.35);
+  --glow: rgba(96, 165, 250, 0.32);
+  --ink: #071020;
+  --ink-text: #e8f0ff;
+  --ink-muted: #7f9cc7;
+  --ink-border: rgba(120, 170, 255, 0.14);
+  --ink-glow: rgba(96, 165, 250, 0.18);
+  --text: #e8f0ff;
+  --text-muted: #8aa6d1;
+  --accent: #60a5fa;
+  --accent-text: #061020;
+  --wait: #f5c451;
+  --no-retrieval: #8aa6d1;
+  --supported: #4ade80;
+  --dropped: #fb7185;
+  --uncertain: #c4b5fd;
+  --added-bg: rgba(74, 222, 128, 0.12);
+  --superseded-bg: rgba(251, 113, 133, 0.12);
+  --mark-bg: rgba(245, 196, 81, 0.3);
+  color-scheme: dark;
+}
+
+:root[data-theme="catppuccin"] {
+  --bg: #1e1e2e;
+  --surface: #181825;
+  --surface-2: #313244;
+  --border: #313244;
+  --border-strong: #45475a;
+  --edge: rgba(205, 214, 244, 0.18);
+  --glow: rgba(137, 180, 250, 0.3);
+  --ink: #11111b;
+  --ink-text: #cdd6f4;
+  --ink-muted: #a6adc8;
+  --ink-border: #313244;
+  --ink-glow: rgba(137, 180, 250, 0.16);
+  --text: #cdd6f4;
+  --text-muted: #a6adc8;
+  --accent: #89b4fa;
+  --accent-text: #11111b;
+  --wait: #f9e2af;
+  --no-retrieval: #a6adc8;
+  --supported: #a6e3a1;
+  --dropped: #f38ba8;
+  --uncertain: #cba6f7;
+  --added-bg: rgba(166, 227, 161, 0.12);
+  --superseded-bg: rgba(243, 139, 168, 0.12);
+  --mark-bg: rgba(249, 226, 175, 0.3);
+  color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
@@ -38,11 +204,12 @@ html, body, #root { height: 100%; }
 
 body {
   margin: 0;
-  background: var(--console-white);
+  background: var(--bg);
   color: var(--text);
   font-family: var(--font-sans);
   font-size: 14px;
   line-height: 20px;
+  -webkit-font-smoothing: antialiased;
 }
 
 button {
