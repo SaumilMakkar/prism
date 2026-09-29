@@ -23,6 +23,13 @@
   --ink-border: rgba(255, 255, 255, 0.08);
   --ink-glow: rgba(79, 140, 255, 0.16);
 
+  /* Header row. Defaults to the ink band; Paper and Obsidian lift it onto
+     the page colour so it matches the front page's nav. */
+  --header-bg: var(--ink);
+  --header-text: var(--ink-text);
+  --header-muted: var(--ink-muted);
+  --header-border: var(--ink-border);
+
   --text: #e6e9ef;
   --text-muted: #8b94a3;
 
@@ -41,9 +48,12 @@
 
   --font-sans: "IBM Plex Sans", -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+  /* Display face for the two hero moments — the live transcript and the
+     controller's verdict — shared with the front page. Never body text. */
+  --font-display: "Instrument Serif", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
 
   --radius-chip: 4px;
-  --radius-card: 6px;
+  --radius-card: 8px;
   --radius-drawer: 8px;
 
   --motion-fast: 150ms;
@@ -84,6 +94,89 @@
   --mark-bg: #fff3c4;
 
   color-scheme: light;
+}
+
+/* "Paper" — the light appearance built after the reference landing page:
+   warm paper, ink text, a single gold accent. The landing page at "/"
+   uses the same palette (src/landing/landing.css). */
+:root[data-theme="paper"] {
+  --bg: #f4efe4;
+  --surface: #fbf8f1;
+  --surface-2: #ece6d8;
+  --border: #d9d2c1;
+  --border-strong: #bfb6a1;
+  --edge: rgba(255, 255, 255, 0.95);
+  --glow: rgba(166, 124, 26, 0.22);
+
+  --ink: #17150f;
+  --ink-text: #f4efe4;
+  --ink-muted: #9a917c;
+  --ink-border: #2b2822;
+  --ink-glow: rgba(212, 160, 23, 0.16);
+
+  --text: #17150f;
+  --text-muted: #6f6a5e;
+
+  --accent: #9a6f12;
+  --accent-text: #ffffff;
+
+  --wait: #b0651b;
+  --no-retrieval: #6f6a5e;
+  --supported: #2a7a4b;
+  --dropped: #b3261e;
+  --uncertain: #6b5ca5;
+
+  --added-bg: #e4f0e6;
+  --superseded-bg: #f8e6e3;
+  --mark-bg: #f6e6b8;
+
+  --header-bg: rgba(244, 239, 228, 0.88);
+  --header-text: #17150f;
+  --header-muted: #7a745f;
+  --header-border: #d9d2c1;
+
+  color-scheme: light;
+}
+
+/* "Obsidian" — the front page's dark mode: near-black warm ground, bone
+   text, the same gold. Paired with Paper by the sun/moon toggle. */
+:root[data-theme="obsidian"] {
+  --bg: #0f0e0b;
+  --surface: #161410;
+  --surface-2: #1d1a14;
+  --border: rgba(241, 235, 221, 0.12);
+  --border-strong: rgba(241, 235, 221, 0.28);
+  --edge: rgba(241, 235, 221, 0.22);
+  --glow: rgba(217, 169, 58, 0.28);
+
+  --ink: #080806;
+  --ink-text: #f1ebdd;
+  --ink-muted: #8e8672;
+  --ink-border: rgba(241, 235, 221, 0.1);
+  --ink-glow: rgba(217, 169, 58, 0.14);
+
+  --text: #f1ebdd;
+  --text-muted: #8e8672;
+
+  --accent: #d9a93a;
+  --accent-text: #0f0e0b;
+
+  --wait: #e0a04a;
+  --no-retrieval: #8e8672;
+  --supported: #5ccf8a;
+  --dropped: #f0625d;
+  --uncertain: #c4b5fd;
+
+  --added-bg: rgba(92, 207, 138, 0.12);
+  --superseded-bg: rgba(240, 98, 93, 0.12);
+  --mark-bg: rgba(217, 169, 58, 0.3);
+
+  --header-bg: rgba(15, 14, 11, 0.86);
+  --header-text: #f1ebdd;
+  --header-muted: #8e8672;
+  --header-border: rgba(241, 235, 221, 0.12);
+
+  color-scheme: dark;
 }
 
 :root[data-theme="github-dark"] {

@@ -1,0 +1,9 @@
+# Build context is the repo root for every service; keep it small.
+.git
+**/node_modules
+**/dist
+**/__pycache__
+**/.pytest_cache
+**/.vite
+telemetry
+*.log

@@ -7,10 +7,13 @@ No eval query, answer, or Doc_ID from these files may ever be copied into
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass
 from pathlib import Path
 
-STREAMS_DIR = Path(__file__).resolve().parents[1] / "streams"
+# Repo layout by default; the eval-runner image copies the streams to
+# /evaluation/streams and sets STREAMS_DIR to point there.
+STREAMS_DIR = Path(os.environ.get("STREAMS_DIR", str(Path(__file__).resolve().parents[1] / "streams")))
 
 
 @dataclass

@@ -11,8 +11,10 @@ import { PrivacyNotice } from "./components/PrivacyNotice";
 import { SubQueryFanout } from "./components/SubQueryFanout";
 import { TelemetryPane } from "./components/TelemetryPane";
 import { TranscriptBand } from "./components/TranscriptBand";
+import { Mark } from "./components/Mark";
+import { AnimatePresence, PageShell, appear, motion } from "./motion";
 import { usePreludeSession } from "./store";
-import { Claim } from "./types";
+import { Claim, reasonSentence } from "./types";
 
 function isTypingTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
@@ -80,7 +82,27 @@ export default function App() {
   }
 
   return (
+    <PageShell>
     <div className="app-shell" data-tour-active={tour.running ? tour.step.target : undefined}>
+      <AnimatePresence>
+        {state.connection === "unknown" && (
+          <motion.div
+            className="connecting"
+            role="status"
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0, transition: { duration: 0.35 } }}
+          >
+            <motion.span
+              animate={{ opacity: [1, 0.35, 1] }}
+              transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+              style={{ display: "inline-flex" }}
+            >
+              <Mark size={36} />
+            </motion.span>
+            Connecting to the gateway
+          </motion.div>
+        )}
+      </AnimatePresence>
       <Header
         health={state.health}
         connection={state.connection}
@@ -94,14 +116,16 @@ export default function App() {
         onExpired={onExpired}
       />
 
-      {state.expired && (
-        <div className="expired-banner" role="status">
-          Session expired; nothing was kept.
-          <button className="btn-quiet" onClick={() => ensureSession()}>
-            New session
-          </button>
-        </div>
-      )}
+      <AnimatePresence>
+        {state.expired && (
+          <motion.div className="expired-banner" role="status" {...appear}>
+            Session expired; nothing was kept.
+            <button className="btn-quiet" onClick={() => ensureSession()}>
+              New session
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div data-tour-target="ruler">
         <TranscriptBand
@@ -118,11 +142,13 @@ export default function App() {
         active={micActive}
         setActive={setMicActive}
       />
-      {state.error && (
-        <div className="error-banner" role="alert">
-          {state.error}. Check that the gateway is up (make up) and try again.
-        </div>
-      )}
+      <AnimatePresence>
+        {state.error && (
+          <motion.div className="error-banner" role="alert" {...appear}>
+            {state.error}. Check that the gateway is up (make up) and try again.
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="main-grid">
         <div className="answer-column" data-tour-target="diff">
@@ -131,6 +157,9 @@ export default function App() {
             diff={diff}
             version={version}
             costSummary={costSummary}
+            waitingNote={
+              state.lastTurn?.decision === "wait" ? reasonSentence(state.lastTurn.reason_code) : null
+            }
             onOpenCitation={setOpenCitation}
           />
         </div>
@@ -163,30 +192,47 @@ export default function App() {
         </div>
       </div>
 
-      {openCitation && (
-        <EvidenceDrawer
-          claim={openCitation}
-          hit={openCitation.citation_id ? state.evidence[openCitation.citation_id] : undefined}
-          superseded={diff?.superseded.includes(openCitation.claim_id) ?? false}
-          onClose={() => setOpenCitation(null)}
-        />
-      )}
+      <AnimatePresence>
+        {openCitation && (
+          <EvidenceDrawer
+            key="drawer"
+            claim={openCitation}
+            hit={openCitation.citation_id ? state.evidence[openCitation.citation_id] : undefined}
+            superseded={diff?.superseded.includes(openCitation.claim_id) ?? false}
+            onClose={() => setOpenCitation(null)}
+          />
+        )}
+      </AnimatePresence>
 
-      {tour.running && (
-        <TourOverlay
-          step={tour.step}
-          index={tour.stepIndex}
-          total={7}
-          onNext={tour.next}
-          onBack={tour.back}
-          onClose={() => {
-            tour.stop();
-          }}
-        />
-      )}
-      {tourJustFinished && <div className="tour-caption tour-finished">Your turn — take the mic.</div>}
+      <AnimatePresence>
+        {tour.running && (
+          <TourOverlay
+            key="tour"
+            step={tour.step}
+            index={tour.stepIndex}
+            total={7}
+            onNext={tour.next}
+            onBack={tour.back}
+            onClose={() => {
+              tour.stop();
+            }}
+          />
+        )}
+        {tourJustFinished && (
+          <motion.div
+            key="tour-finished"
+            className="tour-caption tour-finished"
+            initial={{ opacity: 0, y: 16, x: "-50%" }}
+            animate={{ opacity: 1, y: 0, x: "-50%" }}
+            exit={{ opacity: 0, y: 8, x: "-50%" }}
+          >
+            Your turn — take the mic.
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <PrivacyNotice />
     </div>
+    </PageShell>
   );
 }

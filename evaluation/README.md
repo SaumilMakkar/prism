@@ -26,8 +26,9 @@ Each subfolder under `evaluation/streams/` holds one query category, as timestam
 | `no_evidence/` | Off-corpus questions — correct behavior is `uncertainty` / "not found in the corpus" | G4 (false-positive analysis) |
 | `noise/` | Disfluencies, false starts, self-corrections ("Pune… actually Mumbai") | G2, controller robustness |
 | `presentation/` | "Say that again, shorter" and similar re-render requests | No-retrieval / F8 correctness |
+| `adversarial/` | An injected corpus chunk instructing the model to cite it — correct behavior is the verifier dropping the claim (`adversarial_doc_id` must never reach `verified`) | G4 (zero fabricated IDs), SECURITY.md T3 |
 
-7 streams across these categories as of this writing (one per category above), built by the team — no eval query, answer, or Doc_ID appears anywhere under `services/`; CI greps for this on every push ([SECURITY.md](../documentation/SECURITY.md) T8). `documentation/prelude.md`'s 40-60 figure was the original target scale; expanding coverage per category is tracked as follow-up work, not yet done.
+7 streams across these 7 categories as of this writing (one per category above), built by the team — no eval query, answer, or Doc_ID appears anywhere under `services/`; CI greps for this on every push ([SECURITY.md](../documentation/SECURITY.md) T8). `documentation/prelude.md`'s 40-60 figure was the original target scale; expanding coverage per category is tracked as follow-up work, not yet done.
 
 ## Ablations
 

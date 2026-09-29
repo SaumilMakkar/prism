@@ -54,3 +54,10 @@ def test_extract_entities_excludes_stopwords():
     assert "warranty" in entities
     assert "what" not in entities
     assert "this" not in entities
+
+
+def test_presentation_phrase_inside_a_long_utterance_is_not_a_presentation_turn():
+    # "make it shorter" buried in a 20-word story about something else must
+    # not suppress retrieval for the whole chunk (seen live on the mic).
+    text = "please record my message and can you make it shorter actually yesterday my phone stopped charging after the update"
+    assert is_presentation_turn(text) is False

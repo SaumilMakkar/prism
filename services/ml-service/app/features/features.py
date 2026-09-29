@@ -47,9 +47,18 @@ def has_clause_boundary(text: str) -> bool:
     return bool(CLAUSE_END_RE.search(text.strip()))
 
 
+# A presentation turn is a short request about the *answer* ("say that
+# again, shorter"), not any long utterance that happens to contain one of
+# the phrases. Above this many content tokens the phrase is incidental and
+# the chunk is treated as ordinary transcript so retrieval can still fire.
+PRESENTATION_MAX_CONTENT_TOKENS = 10
+
+
 def is_presentation_turn(text: str) -> bool:
     lowered = text.lower()
-    return any(phrase in lowered for phrase in PRESENTATION_PHRASES)
+    if not any(phrase in lowered for phrase in PRESENTATION_PHRASES):
+        return False
+    return content_token_count(text) <= PRESENTATION_MAX_CONTENT_TOKENS
 
 
 _NLP = None

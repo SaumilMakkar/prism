@@ -21,6 +21,9 @@ services:
     build:
       context: .
       dockerfile: services/ml-service/Dockerfile
+      args:
+        # hash (default) builds in seconds; transformer pulls torch + spaCy.
+        ML_BACKEND: ${ML_BACKEND:-hash}
     environment:
       ML_BACKEND: ${ML_BACKEND:-hash}
     ports: ["8001:8001"]
@@ -97,6 +100,8 @@ services:
     build:
       context: .
       dockerfile: services/web/Dockerfile
+    environment:
+      VITE_GATEWAY_URL: http://gateway:8000
     ports: ["5173:5173"]
     depends_on:
       gateway: { condition: service_healthy }

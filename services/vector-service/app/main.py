@@ -64,8 +64,7 @@ def healthz() -> dict:
     return {"status": "ok", "chunks_indexed": len(state["chunks"])}
 
 
-@app.post("/ingest")
-def ingest() -> dict:
+def _ingest_now() -> int:
     try:
         client = QdrantClient(url=QDRANT_URL)
         dense = DenseIndex(client, vector_size=EMBEDDING_DIM)
@@ -77,11 +76,35 @@ def ingest() -> dict:
     state["bm25"] = bm25
     state["dense"] = dense
     state["by_id"] = {c.chunk_id: c for c in chunks}
-    return {"ingested_chunks": len(chunks)}
+    return len(chunks)
+
+
+@app.on_event("startup")
+def ingest_on_startup() -> None:
+    """The index is in-memory, so every container restart used to need a
+    manual POST /ingest before /search stopped answering 409. Ingest the
+    mounted corpus at boot (best-effort: ml-service may still be warming
+    up, in which case the first /search retries once before giving up)."""
+    if not CORPUS_DIR.exists():
+        return
+    try:
+        _ingest_now()
+    except Exception:
+        pass
+
+
+@app.post("/ingest")
+def ingest() -> dict:
+    return {"ingested_chunks": _ingest_now()}
 
 
 @app.get("/search", response_model=SearchResponse)
 def search(query: str, top_k: int = 5, hybrid: bool = True) -> SearchResponse:
+    if not state["chunks"] and CORPUS_DIR.exists():
+        try:
+            _ingest_now()
+        except Exception:
+            pass
     if not state["chunks"]:
         raise HTTPException(status_code=409, detail="corpus not ingested yet — call POST /ingest")
 

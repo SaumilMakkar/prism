@@ -68,7 +68,12 @@ brief.
    make the decision strip/ruler unreadable — the opposite of the "calm instrument" the
    visual brief asks for. Interim text still drives the live 55%-opacity preview in the
    transcript band (so the caret and partial-text behavior the brief describes are real);
-   only the *posting* cadence differs. See `src/components/MicInput.tsx`'s doc comment.
+   only the *posting* cadence differs. Each final result (and each typed line) is cut into
+   clause-sized chunks of at most six words at punctuation and spoken connectives
+   (`src/chunking.ts`, tested) and posted in order, so the ruler shows real ticks and the
+   controller sees the clause boundary it fires on — the same shape as the eval streams.
+   A trailing spoken "dot" / "period" / "question mark" becomes the punctuation mark.
+   See `src/components/MicInput.tsx`'s doc comment.
 3. **Guided tour drives real `/turn` calls against the same session's claim graph**,
    rather than a dedicated gateway "replay a stream" endpoint. Functionally this produces
    the same visible effect — every tour step is a real orchestrator run — via the smaller
@@ -121,9 +126,16 @@ stub it in the web." Everything below was added to the backend, backed by real d
 Added at the team's request after reviewing a reference landing page. Every colour is a
 token in `src/tokens.css`; a theme only redefines those variables via `data-theme` on
 `<html>`, chosen from the header's Appearance menu (`src/components/ThemeMenu.tsx`) and
-remembered per viewer in localStorage. Six appearances ship: **Mission Control**
-(default), VS Code Dark, GitHub Dark, **Light** (the brief's original two-material
-design, unchanged), Blueprint, Catppuccin.
+remembered per viewer in localStorage. Eight appearances ship: **Paper** (default — warm
+paper, ink, one gold accent; the front page's palette, below), **Obsidian** (the front
+page's dark mode, same gold), **Light** (the brief's original two-material design,
+unchanged), Mission Control, VS Code Dark, GitHub Dark, Blueprint, Catppuccin. A sun/moon
+toggle next to the menu flips between Paper and Obsidian only; it writes the same
+localStorage key the front page's toggle writes, so `/` and `/console` always open in the
+mode the viewer last chose, and a one-line script in `index.html` applies the remembered
+theme before first paint so neither page flashes the other mode. In Paper and Obsidian the
+header row leaves the ink band and sits on the page colour (`--header-*` tokens), matching
+the front page's nav; the transcript band stays the one dark surface.
 
 The edge treatment is one rule applied to every card (`.engine-section`, `.lamp-block`,
 `.telemetry-pane`, `.drawer`, the appearance popover): a flat surface, a 1px border, and
@@ -133,6 +145,23 @@ glow beneath. The primary button, the caret and the fired marker carry the same 
 glow. This is a deliberate deviation from the brief's "no drop shadows except the drawer"
 line: the glow is the accent spent on the same forward-motion elements as before, and the
 Light theme keeps the original look for anyone who prefers the brief as written.
+
+## Motion (Framer Motion)
+
+Motion is centralised in `src/motion.tsx` and keeps the principle above — it only marks a
+state change that already happened in the data. What animates: the page arriving (fade
+and 10px rise) and leaving (a `TransitionLink` plays a 220ms exit before `location.assign`,
+since `/` and `/console` are separate document loads); a "Connecting to the gateway"
+screen with the mark breathing until the first `/healthz` answer, then a cross-fade out;
+claim rows rising in as they are added and fading as they are superseded (`AnimatePresence`
+around the claim list); the controller lamp's verdict, where the previous word fades out
+before the new one rises in; the evidence drawer sliding in from the right with its
+backdrop fading; the tour caption and any banner; the appearance popover. On the front
+page, the hero lines stagger in on load, sections rise into view once as they are scrolled
+to, the engineering panel cross-fades between tabs and its chips stagger, and the sun/moon
+icon rotates on flip. `MotionConfig reducedMotion="user"` turns every one of these into an
+instant cut when the OS asks for reduced motion; the four CSS motions from the brief are
+unchanged.
 
 ## Keyboard
 
@@ -151,3 +180,67 @@ verifier-trail decoding (`src/types.test.ts`), the headroom label
 "never retrieved" state (`src/components/EvidenceDrawer.test.tsx`), and the Web Speech
 fallback path (`src/components/MicInput.test.tsx`). All fixtures are synthetic literals in
 the test files — nothing from `evaluation/` or `corpus/` appears under `services/web/src`.
+
+## The front page (`/`)
+
+Added after the team reviewed a second reference landing page and asked for the same feel
+in light mode. The bundle now serves two pages: the front page at `/` (`src/landing/`)
+and the dashboard at `/console` (`src/App.tsx`), chosen by one pathname check in
+`src/route.ts` — no router library, and the Vite dev server (which nginx proxies) already falls
+back to `index.html` for any path.
+
+**What it is.** A single scrolling page in the reference's structure — announcement strip,
+sticky nav, split hero (headline left, mission / problem / apparatus right), a stats band,
+four stacked "pillar" cards with a numbered stepper, a marquee of controller and verifier
+vocabulary, the apparatus diagram, a tabbed engineering panel, a closing "proven headroom"
+mark and a footer. The copy in `src/landing/content.ts` only says things the repo backs:
+the four numbers are the README scorecard (6/6 gates, measured offline), the controller's
+no-LLM guarantee, the service count and the `make up` target. No eval-stream text and no
+adversarial document id appear (the hardcode grep covers `src/landing/` like everything
+else under `services/`).
+
+**Light first, dark as a flip.** The page is light ("paper": warm paper, ink, a single
+gold accent, an italic serif for display lines) by default, with an "obsidian" flip in the
+nav kept per viewer in localStorage. Both are token sets on `.landing[data-mode]` in
+`src/landing/landing.css`; nothing in it leaks into the dashboard, and the dashboard's new
+**Paper** appearance uses the same palette so the two pages feel like one product.
+
+**The visuals are drawn, not generated.** No AI image or video generation was available
+in the session that built this, so the page carries no raster media. The hero "film"
+(`src/landing/HeroVisual.tsx`) is a looping SVG of one console turn — chunks arriving on a
+millisecond ruler, the hollow safe marker and the filled fired marker, claims forming with
+citations, a late detail superseding one claim and adding another — timed entirely by CSS
+keyframes so `prefers-reduced-motion` freezes it on the final frame. It is labelled as an
+illustration on the page; the console runs the real thing. The apparatus diagram
+(`src/landing/Apparatus.tsx`) is the same idea for the architecture: inputs converge on
+the gateway, one turn runs decompose → retrieve → synthesize → verify, the answer ships
+only after the verifier passes, and the measured outcome is the headroom the ruler shows.
+The transcript and claims in the film are synthetic; the document ids are public corpus
+fixtures. If the team records the demo video (`documentation/VIDEO_SCRIPT.md`), the hero
+figure is where it belongs.
+
+**The console shares the signature.** After the front page landed, the dashboard took the
+same type system so `/` and `/console` read as one product: the logo mark and a "Front
+page" link in the header, badges, buttons and section labels in tracked mono (the front
+page's eyebrow style), and the display serif on exactly two hero moments — the live
+transcript line and the controller's verdict word ("Retrieve" / "Wait" / "No-Retrieval"),
+plus the "Not in the corpus" title. Body copy, claims, quotes and every number stay in
+Plex Sans / Plex Mono. This is a typographic change shared by all appearances; the rule
+that a theme only redefines colour tokens still holds (`--font-display` lives once in
+`:root`).
+
+**The recording.** `public/media/console-demo.webm` (with its poster frame) is a screen
+recording of `/console` in Paper mode, made with Playwright's video capture against the
+running stack, on four typed, synthetic support-call sentences. Nothing in it is scripted
+or staged: every controller decision, retrieval, claim and verifier verdict on screen is
+the engine's own on that input, and no eval-stream text is typed. It sits in the
+"Recording" section of the front page, muted and looping, with controls. Re-record after
+a visible UI change; the poster is the final frame of the same session.
+
+**Type.** The display serif is Instrument Serif (regular + italic), self-hosted via
+`@fontsource/instrument-serif` like the Plex faces — still no runtime CDN. It is used for
+headlines and pull lines only; body copy stays in IBM Plex Sans, labels in Plex Mono.
+
+**Tests.** `src/landing/Landing.test.tsx` covers the headline and console links, the
+paper/obsidian flip and its storage guard, every pillar rendering, and the engineering
+tabs switching their panel; `src/route.test.ts` covers the path split.

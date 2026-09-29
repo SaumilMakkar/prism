@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { AnimatePresence, appear, motion } from "../motion";
 import { Claim, ClaimDiff, verifierTrailFor } from "../types";
 
 export function claimClass(claim: Claim, diff: ClaimDiff | undefined): "added" | "superseded" | "unchanged" {
@@ -32,7 +33,7 @@ function ClaimRow({
   const cls = claimClass(claim, diff);
   const sign = cls === "added" ? "+" : cls === "superseded" ? "−" : "=";
   return (
-    <div className={`claim-row claim-${cls}`}>
+    <motion.div layout="position" className={`claim-row claim-${cls}`} {...appear}>
       <div className="claim-line">
         <span className="claim-sign">{sign}</span>
         <span className="claim-text">{claim.text}</span>
@@ -46,7 +47,7 @@ function ClaimRow({
         <Trail claim={claim} />
       </div>
       {claim.quote && <div className="claim-quote">&ldquo;{claim.quote}&rdquo;</div>}
-    </div>
+    </motion.div>
   );
 }
 
@@ -55,12 +56,14 @@ export function AnswerPanel({
   diff,
   version,
   costSummary,
+  waitingNote,
   onOpenCitation,
 }: {
   claims: Claim[];
   diff: ClaimDiff | undefined;
   version: number;
   costSummary: string;
+  waitingNote?: string | null;
   onOpenCitation: (claim: Claim) => void;
 }) {
   const [showDiff, setShowDiff] = useState(true);
@@ -90,7 +93,16 @@ export function AnswerPanel({
       <div className="answer-cost-note">{costSummary}</div>
 
       {visibleVerified.length === 0 && uncertain.length === 0 && (
-        <div className="answer-empty">No claims yet. Start the tour or take the mic; verified claims appear here with their citations.</div>
+        <div className="answer-empty">
+          {waitingNote ? (
+            <>
+              <strong>Controller is waiting.</strong> {waitingNote} Retrieval fires once a clause ends with a
+              content anchor (a device, a policy, a symptom).
+            </>
+          ) : (
+            "No claims yet. Start the tour or take the mic; verified claims appear here with their citations."
+          )}
+        </div>
       )}
 
       {prose ? (
@@ -104,14 +116,16 @@ export function AnswerPanel({
         </p>
       ) : (
         <div className="claim-list">
-          {visibleVerified.map((c) => (
-            <ClaimRow key={c.claim_id} claim={c} diff={diff} onOpenCitation={onOpenCitation} />
-          ))}
+          <AnimatePresence initial={false}>
+            {visibleVerified.map((c) => (
+              <ClaimRow key={c.claim_id} claim={c} diff={diff} onOpenCitation={onOpenCitation} />
+            ))}
+          </AnimatePresence>
         </div>
       )}
 
       {uncertain.length > 0 && (
-        <div className="uncertainty-block">
+        <motion.div className="uncertainty-block" {...appear}>
           <div className="uncertainty-title">Not in the corpus</div>
           {uncertain
             .filter((c) => c.reason_code === "ID_NOT_IN_RETRIEVAL_SET" || c.reason_code === null)
@@ -121,7 +135,7 @@ export function AnswerPanel({
                 <div className="uncertainty-ask">&rarr; asks: "Could you clarify or provide more detail?"</div>
               </div>
             ))}
-        </div>
+        </motion.div>
       )}
 
       {uncertain.length > 0 && (

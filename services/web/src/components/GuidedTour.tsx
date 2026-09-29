@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import * as api from "../api";
+import { motion } from "../motion";
 
 export interface TourStep {
   stream: string;
@@ -103,7 +104,12 @@ export function TourOverlay({
   }, [onClose]);
 
   return (
-    <div className="tour-caption">
+    <motion.div
+      className="tour-caption"
+      initial={{ opacity: 0, y: 16, x: "-50%" }}
+      animate={{ opacity: 1, y: 0, x: "-50%" }}
+      exit={{ opacity: 0, y: 8, x: "-50%", transition: { duration: 0.18 } }}
+    >
       <span className="tour-step-count">
         {index + 1} / {total}
       </span>
@@ -119,6 +125,6 @@ export function TourOverlay({
           Esc
         </button>
       </div>
-    </div>
+    </motion.div>
   );
 }
