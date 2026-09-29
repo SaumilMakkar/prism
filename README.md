@@ -26,7 +26,7 @@ A RAG engine that retrieves while the user is still speaking, splits one sentenc
 ## Prerequisites
 
 - Docker + Docker Compose v2
-- (Optional, for `AI_MODE=live`) an OpenAI API key — `make eval` and the default demo profile run in `replay` mode and need no key ([ADR-0007](documentation/adr/0007-llm-choice-and-replay.md))
+- (Optional, for `AI_MODE=live`) an OpenAI API key — `make eval` and the default demo profile run in `offline` mode and need no key; `MODE=replay` serves committed trajectories ([ADR-0007](documentation/adr/0007-llm-choice-and-replay.md))
 
 ## Setup
 
