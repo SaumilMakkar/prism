@@ -1,3 +1,4 @@
+import { AnimatePresence, appear, motion } from "../motion";
 import { TelemetryEvent, TurnResponse, reasonSentence } from "../types";
 
 const WORDS: Record<string, string> = {
@@ -21,8 +22,12 @@ export function ControllerLamp({ turn, events }: { turn: TurnResponse | null; ev
   const decisionEvent = events.find((e) => e.event === "controller_decision" && e.trace_id === turn.trace_id);
   const f = decisionEvent?.features;
 
+  // One verdict at a time: the previous one fades out before the new one
+  // rises in, so a change of decision is visible even from across the room.
   return (
-    <div className={`lamp-block lamp-${turn.decision}`} key={turn.trace_id}>
+    <div className={`lamp-block lamp-${turn.decision}`}>
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div key={turn.trace_id} {...appear}>
       <span className="lamp-word">{WORDS[turn.decision] ?? turn.decision}</span>
       <span className="reason-code">{turn.reason_code}</span>
       <span className="lamp-sentence">{reasonSentence(turn.reason_code)}</span>
@@ -46,6 +51,8 @@ export function ControllerLamp({ turn, events }: { turn: TurnResponse | null; ev
           </div>
         </dl>
       )}
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 }

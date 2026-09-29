@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { EASE, motion } from "../motion";
 import { Claim, EvidenceHit, parseCitation, verifierTrailFor } from "../types";
 
 /** Split a chunk around the verbatim quote so it can be <mark>ed. Returns
@@ -45,8 +46,25 @@ export function EvidenceDrawer({
   }, [onClose]);
 
   return (
-    <div className="drawer-backdrop" role="presentation" onClick={onClose}>
-      <div className="drawer" role="dialog" aria-label="Evidence" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+    <motion.div
+      className="drawer-backdrop"
+      role="presentation"
+      onClick={onClose}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0, transition: { duration: 0.18 } }}
+    >
+      <motion.div
+        className="drawer"
+        role="dialog"
+        aria-label="Evidence"
+        aria-modal="true"
+        onClick={(e) => e.stopPropagation()}
+        initial={{ x: 48, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        exit={{ x: 32, opacity: 0, transition: { duration: 0.18 } }}
+        transition={{ duration: 0.32, ease: EASE }}
+      >
         <button className="drawer-close" onClick={onClose} aria-label="Close">
           Esc
         </button>
@@ -156,7 +174,7 @@ export function EvidenceDrawer({
             </dl>
           </>
         )}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
