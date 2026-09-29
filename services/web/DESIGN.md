@@ -13,9 +13,9 @@ See `src/tokens.css` for the authoritative values. Summary:
 | `--console-white` | `#f3f4f2` | Answer column |
 | `--bench-grey` | `#e8eae6` | Engine column |
 | `--rule` | `#cfd3cc` | The only separator — 1px rules, never shadows |
-| `--accent` | `#2f6bff` | Fired marker, caret, Retrieve state, primary actions — spent nowhere else |
+| `--accent` | `#2f6bff` | Fired marker, caret, Retrieve state, cache-hit badge, focus ring, primary actions — spent nowhere else |
 | `--wait` / `--no-retrieval` / `--supported` / `--dropped` / `--uncertain` | amber / grey / green / red / violet | Always paired with a glyph or word, never color alone |
-| `--font-sans` / `--font-mono` | IBM Plex Sans / IBM Plex Mono, **falls back to system stack** | See deviation #1 below |
+| `--font-sans` / `--font-mono` | IBM Plex Sans / IBM Plex Mono, self-hosted | Bundled from `@fontsource/ibm-plex-*` (woff2, latin subset); no runtime CDN |
 
 Spacing/type scale, radii (4px chips, 8px drawer), and the four permitted motions (caret
 blink, fired-marker drop, lamp cross-fade, diff transition) are all defined once in
@@ -23,25 +23,30 @@ blink, fired-marker drop, lamp cross-fade, diff transition) are all defined once
 
 ## Wireframe
 
-Implemented layout matches the brief's ASCII wireframe: header row; full-width dark
-transcript band with headroom ruler + decision strip beneath it; a 58/42 answer/engine
-split below that; evidence drawer as an overlay sliding from the right. Below 1024px the
-two columns stack (see `.main-grid` media query in `styles.css`); no special handling
-below 768px, matching the brief.
+Implemented layout matches the brief's ASCII wireframe: header row (hashed session id, mode
+and ML badges, gateway state, TTL countdown, cost, Tour, Mic); full-width dark transcript
+band with a three-line history rail above the live caption, headroom ruler + decision strip
+beneath it; a 58/42 answer/engine split below that; evidence drawer as an overlay sliding
+from the right. Engine column, top to bottom: controller lamp (with the evaluated
+features), sub-query fan-out, latency waterfall, evidence graph (collapsible), telemetry
+pane. Below 1024px the two columns stack; no special handling below 768px, matching the
+brief.
 
 ## Five principles
 
 1. **Every number on screen is a number the backend actually returned.** No panel invents
    a rank, a score, or a timing that the gateway/telemetry didn't produce this turn — see
-   "Data honesty" below for the two places this measurably shrank the spec.
+   "Data honesty" below for what this ruled out and what was added to the gateway instead.
 2. **The transcript is the hero; everything else explains it.** The dark band is the only
    dark surface, sized and weighted so a judge across the room reads the caption before
    anything else.
 3. **Color never carries meaning alone.** Every semantic color is paired with a word or a
-   glyph (Wait/Retrieve/No-Retrieval spelled out, ✔/✘ in the verifier trail).
+   glyph (Wait/Retrieve/No-Retrieval spelled out, ✔/✘ in the verifier trail, hollow vs.
+   filled markers on the ruler, dashed vs. solid edges in the graph).
 4. **One accent, spent once.** Signal blue marks exactly the things that represent
-   forward motion — the fired marker, the caret, the Retrieve state, primary buttons —
-   and nothing else on the page uses it, so it stays legible as a signal.
+   forward motion — the fired marker, the caret, the Retrieve state, a cache hit, the
+   focus ring, primary buttons — and nothing else on the page uses it, so it stays legible
+   as a signal.
 5. **Reversible, not decorative, motion.** The four permitted animations (caret, marker
    drop, lamp cross-fade, diff transition) all communicate a state change that already
    happened in the data; nothing animates just to feel alive, and `prefers-reduced-motion`
@@ -49,14 +54,13 @@ below 768px, matching the brief.
 
 ## Deviations from the brief, and why
 
-1. **Fonts are not self-hosted.** The brief asks for IBM Plex Sans/Mono as self-hosted
-   woff2 in `assets/fonts/`. The build environment for this pass had no reliable way to
-   fetch and vendor the actual font binaries, and shipping a `@font-face` rule pointing at
-   files that don't exist would be worse than not claiming them. `tokens.css` names IBM
-   Plex first in the stack and falls back to the system sans/mono stack, so the layout,
-   scale, and mono-for-scannable-values rules are all real; only the specific typeface
-   is a placeholder. Follow-up: vendor the two woff2 files into `assets/fonts/` and this
-   becomes a one-line change.
+1. **Headroom is shown in chunks, not milliseconds.** The brief's ruler labels the gap in
+   ms. The safe point Prelude actually has is `expected_safe_chunk_index`, an offline label
+   on each committed eval stream — the same quantity `make eval` scores for G2. The ruler
+   draws chunk arrivals on a real ms axis (client-observed), a hollow marker at the safe
+   chunk and a filled one at the fired chunk, and labels the gap in chunks ("2 chunks of
+   headroom"). In live mic mode there is no safe label, and the ruler says "headroom
+   available in replay/eval" rather than inventing one.
 2. **Mic mode posts only finalized speech results as chunks, not every interim delta.**
    The brief's literal text says "each interim delta is posted as a chunk." Web Speech's
    interim results fire roughly every 100ms while speaking; posting each one as a
@@ -71,46 +75,61 @@ below 768px, matching the brief.
    `GET /demo/streams` / `GET /demo/streams/{name}` addition (below) instead of a new
    stream-replay capability, since the eight moments only need the *turn* pipeline to run
    for real, not a server-driven playback mechanism.
+4. **The evidence graph is a hand-laid three-column SVG, not a force graph.** The brief
+   allows react-force-graph-2d here. A documents → chunks → claims ladder reads faster on
+   a projector than a settling simulation, keeps the "no charting library" rule intact,
+   and superseded/dropped edges (greyed dashed / violet dashed) stay legible because the
+   layout does not move.
 
-## Data honesty: what the gateway didn't have, and what I added instead of stubbing
+## Data honesty: what the gateway didn't have, and what was added instead of stubbing
 
 Per the brief: "If something the UI needs is missing, list it as a gateway TODO; do not
-stub it in the web." Two things followed from that:
+stub it in the web." Everything below was added to the backend, backed by real data:
 
-**Added to the gateway (small, real, backed by actual data):**
-- `GET /healthz` now proxies `ai_mode`/`ml_backend` from ai-service/ml-service so the
-  header badges are real, not guessed (`services/gateway/app/main.py`).
+- `GET /healthz` proxies `ai_mode`/`ml_backend` from ai-service/ml-service and reports
+  `session_ttl_seconds`, so the header badges and the TTL countdown are real.
+- `POST /session/start` returns `session_ttl_seconds`; the header counts down from it and,
+  at zero, the dashboard drops its state and shows "Session expired; nothing was kept."
 - `GET /cost/{token}` proxies ai-service's per-session cost meter.
 - `GET /telemetry/{token}` returns *this session's own* recorded events (filtered by
   `session_id_hash` — never another session's), powering the telemetry pane, the
-  sub-query fan-out, and the latency waterfall from data that was already being recorded
-  but was previously unreachable by the UI.
-- `orchestrator.py` now times each stage (controller, decompose, per-sub-query search,
-  per-sub-query synthesize, verify) with `time.perf_counter()` and emits real
-  `latency_ms` on the corresponding telemetry events — the latency waterfall is real
-  wall-clock time, not a mock.
+  sub-query fan-out, and the latency waterfall.
+- `controller_decision` events now carry `features` (anchors, drift, clause boundary,
+  content tokens) — the ruler tooltips and the lamp's feature list read those.
+- `retrieval_completed` events carry `cache_hit` / `cache_similarity` from the session
+  semantic cache (F9) — the fan-out's "cached · sim 0.97" badge and the answer panel's
+  "1 targeted query, 1 from cache" line read those.
+- `/turn` responses carry `evidence`: this turn's retrieval hits with full chunk text,
+  document title/version/effective date, BM25 rank, dense rank, RRF score, rerank rank,
+  the sub-query that retrieved it, and cache hit. The evidence drawer and the evidence
+  graph are built from that. A citation with no hit this session (the injected-chunk
+  case) is shown as exactly that, never filled in.
 - `GET /demo/streams` / `GET /demo/streams/{name}` serve the committed evaluation
   streams read-only, server-side, so the guided tour never bundles stream content into
-  the web build (keeps the hardcode-grep guarantee intact).
+  the web build (keeps the hardcode-grep guarantee intact). The tour passes each stream's
+  `expected_safe_chunk_index` to the ruler for the hollow safe marker.
 
-**Left as an honest gap, not stubbed (gateway TODO for a future pass):**
-- The evidence drawer cannot show full chunk text, BM25/dense rank, RRF score, or
-  rerank score — `RetrievalHit` (`packages/core/prism_core/schemas.py`) only carries a
-  single fused `score` and `source` string per hit, and telemetry only records
-  `citation_id`s, not full hit objects. The drawer shows citation id, the verbatim quote,
-  and the verifier trail (all real) and nothing it would have to invent.
+**Still an honest gap:**
 - There is no SSE/WS event stream; `/turn` is synchronous request/response. The UI
   therefore cannot show true mid-flight per-stage status ("searching…" → "reranking…")
   for a sub-query — the fan-out shows each sub-query's final state only, which is
   consistent with the architecture (ADR-0001) rather than a missing feature to paper
   over with a fake progress animation.
 
+## Keyboard
+
+`M` toggles the mic, `T` starts the tour, `Esc` closes any drawer or the tour. Shortcuts
+are ignored while a text field has focus. Every control has a visible `:focus-visible`
+ring; the answer region is `aria-live="polite"`, the transcript is not (too chatty).
+
 ## Testing
 
-`npm test` runs Vitest + Testing Library over: the reducer (`src/store.test.ts`), the
-diff classifier and its rendered output (`src/components/AnswerPanel.test.tsx` —
-`claimClass` plus a render assertion that added/superseded rows keep their citations),
-the citation-id parser (`src/types.test.ts`), and the Web Speech fallback path
-(`src/components/MicInput.test.tsx`, exercised naturally since jsdom has no
-`SpeechRecognition`). All fixtures are synthetic literals in the test files — nothing
-from `evaluation/` or `corpus/` appears under `services/web/src`.
+`npm test` runs Vitest + Testing Library over: the reducer (`src/store.test.ts` — chunk
+bookkeeping, evidence accumulation, safe-chunk index, session expiry), the diff classifier
+and its rendered output (`src/components/AnswerPanel.test.tsx`), the citation-id parser and
+verifier-trail decoding (`src/types.test.ts`), the headroom label
+(`src/components/TranscriptBand.test.tsx`), the evidence graph builder and render
+(`src/components/EvidenceGraph.test.tsx`), the evidence drawer's quote highlighting and
+"never retrieved" state (`src/components/EvidenceDrawer.test.tsx`), and the Web Speech
+fallback path (`src/components/MicInput.test.tsx`). All fixtures are synthetic literals in
+the test files — nothing from `evaluation/` or `corpus/` appears under `services/web/src`.
