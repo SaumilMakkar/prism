@@ -38,6 +38,7 @@ test:
 	cd services/ml-service && python -m pytest -q
 	cd services/vector-service && python -m pytest -q
 	cd services/ai-service && python -m pytest -q
+	cd services/mcp-adapter && python -m pytest -q
 	cd evaluation/harness && python -m pytest -q
 
 docs:

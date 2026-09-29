@@ -46,6 +46,12 @@ jobs:
           python -m pip install -q fastapi pydantic pytest
           python -m pytest -q
 
+      - name: Test mcp-adapter
+        run: |
+          cd services/mcp-adapter
+          python -m pip install -q httpx pytest
+          python -m pytest -q
+
       - name: Test evaluation harness scoring
         run: |
           cd evaluation/harness
