@@ -116,6 +116,24 @@ stub it in the web." Everything below was added to the backend, backed by real d
   consistent with the architecture (ADR-0001) rather than a missing feature to paper
   over with a fake progress animation.
 
+## Appearance themes and the edge treatment
+
+Added at the team's request after reviewing a reference landing page. Every colour is a
+token in `src/tokens.css`; a theme only redefines those variables via `data-theme` on
+`<html>`, chosen from the header's Appearance menu (`src/components/ThemeMenu.tsx`) and
+remembered per viewer in localStorage. Six appearances ship: **Mission Control**
+(default), VS Code Dark, GitHub Dark, **Light** (the brief's original two-material
+design, unchanged), Blueprint, Catppuccin.
+
+The edge treatment is one rule applied to every card (`.engine-section`, `.lamp-block`,
+`.telemetry-pane`, `.drawer`, the appearance popover): a flat surface, a 1px border, and
+a 1px highlight along the top edge that fades at both ends, so panels read as lit from
+above rather than floating on a shadow. Hover brightens the border and adds a soft accent
+glow beneath. The primary button, the caret and the fired marker carry the same accent
+glow. This is a deliberate deviation from the brief's "no drop shadows except the drawer"
+line: the glow is the accent spent on the same forward-motion elements as before, and the
+Light theme keeps the original look for anyone who prefers the brief as written.
+
 ## Keyboard
 
 `M` toggles the mic, `T` starts the tour, `Esc` closes any drawer or the tour. Shortcuts
