@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { chunkUtterance } from "../chunking";
 
 // Web Speech API isn't in the standard TS lib; declare the minimal shape used.
 interface SpeechRecognitionResultLike {
@@ -30,20 +31,21 @@ function getSpeechRecognition(): (new () => SpeechRecognitionLike) | null {
 
 /** Mic mode (M) with a typing fallback for browsers without Web Speech
  * (Firefox, some Chromium builds) — so the judge can still "take the mic"
- * without a working microphone. Only FINAL speech results are posted as
- * chunks; interim results only update the live preview (draftText). Posting
- * every interim delta as its own chunk (as the brief's literal text
- * suggests) would flood the controller with near-duplicate fragments every
- * ~100ms, which reads as noisy rather than as the calm instrument this
- * dashboard is meant to be — documented as a deliberate deviation in
- * services/web/DESIGN.md rather than followed to the letter. */
+ * without a working microphone. Only FINAL speech results are posted;
+ * interim results only update the live preview (draftText). Posting every
+ * interim delta as its own chunk (as the brief's literal text suggests)
+ * would flood the controller with near-duplicate fragments every ~100ms.
+ * Instead each final result is cut into short clause-sized chunks
+ * (src/chunking.ts) and posted in order, so the ruler shows real ticks and
+ * the controller sees the clause boundary it fires on — the same shape as
+ * the committed eval streams. Documented in services/web/DESIGN.md. */
 export function MicInput({
   onFinal,
   onDraft,
   active,
   setActive,
 }: {
-  onFinal: (text: string) => void;
+  onFinal: (text: string) => Promise<unknown> | void;
   onDraft: (text: string) => void;
   active: boolean;
   setActive: (active: boolean) => void;
@@ -51,6 +53,22 @@ export function MicInput({
   const [supported, setSupported] = useState(true);
   const [typed, setTyped] = useState("");
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  // Chunks are posted strictly in order; a new final result queues behind
+  // the previous one so the controller never sees chunk 3 before chunk 2.
+  const queueRef = useRef<Promise<unknown>>(Promise.resolve());
+
+  function postChunked(text: string) {
+    const chunks = chunkUtterance(text);
+    queueRef.current = queueRef.current.then(async () => {
+      for (const chunk of chunks) {
+        try {
+          await onFinal(chunk);
+        } catch {
+          return; // send() already surfaced the error banner
+        }
+      }
+    });
+  }
 
   useEffect(() => {
     setSupported(getSpeechRecognition() !== null);
@@ -70,7 +88,7 @@ export function MicInput({
         const result = e.results[i];
         const transcript = result[0].transcript;
         if (result.isFinal) {
-          onFinal(transcript.trim());
+          postChunked(transcript.trim());
           onDraft("");
         } else {
           interim += transcript;
@@ -88,7 +106,7 @@ export function MicInput({
 
   function submitTyped() {
     if (!typed.trim()) return;
-    onFinal(typed.trim());
+    postChunked(typed.trim());
     setTyped("");
     onDraft("");
   }

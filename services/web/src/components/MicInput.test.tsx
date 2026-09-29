@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { MicInput } from "./MicInput";
 
@@ -13,22 +13,22 @@ describe("MicInput — Web Speech fallback path", () => {
     ).toBeInTheDocument();
   });
 
-  it("submits typed text as a chunk on Enter", () => {
+  it("submits typed text as a chunk on Enter", async () => {
     const onFinal = vi.fn();
     render(<MicInput onFinal={onFinal} onDraft={vi.fn()} active={false} setActive={vi.fn()} />);
     const input = screen.getByPlaceholderText(/Web Speech unavailable|Press Mic, or type a chunk/i);
     fireEvent.change(input, { target: { value: "my phone will not power on" } });
     fireEvent.keyDown(input, { key: "Enter" });
-    expect(onFinal).toHaveBeenCalledWith("my phone will not power on");
+    await waitFor(() => expect(onFinal).toHaveBeenCalledWith("my phone will not power on"));
   });
 
-  it("submits typed text via the Send button", () => {
+  it("submits typed text via the Send button", async () => {
     const onFinal = vi.fn();
     render(<MicInput onFinal={onFinal} onDraft={vi.fn()} active={false} setActive={vi.fn()} />);
     const input = screen.getByPlaceholderText(/Web Speech unavailable|Press Mic, or type a chunk/i);
     fireEvent.change(input, { target: { value: "hello" } });
     fireEvent.click(screen.getByText("Send"));
-    expect(onFinal).toHaveBeenCalledWith("hello");
+    await waitFor(() => expect(onFinal).toHaveBeenCalledWith("hello"));
   });
 
   it("does not submit empty input", () => {

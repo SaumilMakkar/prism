@@ -68,7 +68,12 @@ brief.
    make the decision strip/ruler unreadable — the opposite of the "calm instrument" the
    visual brief asks for. Interim text still drives the live 55%-opacity preview in the
    transcript band (so the caret and partial-text behavior the brief describes are real);
-   only the *posting* cadence differs. See `src/components/MicInput.tsx`'s doc comment.
+   only the *posting* cadence differs. Each final result (and each typed line) is cut into
+   clause-sized chunks of at most six words at punctuation and spoken connectives
+   (`src/chunking.ts`, tested) and posted in order, so the ruler shows real ticks and the
+   controller sees the clause boundary it fires on — the same shape as the eval streams.
+   A trailing spoken "dot" / "period" / "question mark" becomes the punctuation mark.
+   See `src/components/MicInput.tsx`'s doc comment.
 3. **Guided tour drives real `/turn` calls against the same session's claim graph**,
    rather than a dedicated gateway "replay a stream" endpoint. Functionally this produces
    the same visible effect — every tour step is a real orchestrator run — via the smaller
