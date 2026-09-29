@@ -4,6 +4,16 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Prelude — Live Agent Assist</title>
+    <script>
+      // Apply the remembered appearance before first paint so the page never
+      // flashes the wrong mode. Same key and same default as ThemeMenu.tsx.
+      (function () {
+        var known = ["paper", "obsidian", "light", "mission-control", "vscode-dark", "github-dark", "blueprint", "catppuccin"];
+        var t = "paper";
+        try { var s = localStorage.getItem("prelude_theme"); if (known.indexOf(s) >= 0) t = s; } catch (e) {}
+        document.documentElement.dataset.theme = t;
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
