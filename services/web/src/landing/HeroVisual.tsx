@@ -87,7 +87,7 @@ export function HeroVisual() {
         </text>
         <g className="lv-fired lv-s56" transform="translate(474, 160)">
           <circle r="6" />
-          <text x="-12" y="-14" textAnchor="end" className="lv-mono lv-gold">
+          <text x="12" y="37" className="lv-mono lv-gold">
             RETRIEVE · new_anchor
           </text>
         </g>
@@ -105,7 +105,7 @@ export function HeroVisual() {
         <g className="lv-claim lv-s26" transform="translate(18, 250)">
           <text className="lv-check">✔</text>
           <text x="18" className="lv-cite">
-            KB_004 §2
+            KB_004 · 2.1
           </text>
           <text x="112" className="lv-claimtext">
             Restart loops after an update are a known, covered fault
@@ -114,7 +114,7 @@ export function HeroVisual() {
         <g className="lv-claim lv-s31" transform="translate(18, 284)">
           <text className="lv-check">✔</text>
           <text x="18" className="lv-cite">
-            POL_002 §1
+            POL_002 · 1.2
           </text>
           <text x="112" className="lv-claimtext">
             Standard warranty applies to units bought in-country
@@ -133,7 +133,7 @@ export function HeroVisual() {
         <g className="lv-claim lv-added lv-s66" transform="translate(18, 352)">
           <text className="lv-plus">+</text>
           <text x="18" className="lv-cite">
-            POL_002 §4
+            POL_002 · 4.1
           </text>
           <text x="112" className="lv-claimtext">
             Overseas units: 14-day inspection before a repair is booked

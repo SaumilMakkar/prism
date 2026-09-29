@@ -412,6 +412,19 @@
 @keyframes ap-dash { to { stroke-dashoffset: -24; } }
 @keyframes ap-spin { to { transform: rotate(360deg); } }
 
+/* ---- recording ---- */
+.recording { border-bottom: 1px solid var(--l-rule); }
+.recording-frame { margin: 0; }
+.recording-frame video {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 10px;
+  border: 1px solid var(--l-rule-strong);
+  box-shadow: var(--l-shadow);
+  background: var(--l-surface);
+}
+
 /* ---- engineering ---- */
 .eng-panel { display: grid; grid-template-columns: 300px 1fr; border: 1px solid var(--l-rule-strong); background: var(--l-surface); border-radius: 6px; overflow: hidden; box-shadow: var(--l-shadow); }
 .eng-tabs { display: flex; flex-direction: column; border-right: 1px solid var(--l-rule); }

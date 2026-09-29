@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { Mark } from "../components/Mark";
+import { AnimatePresence, EASE, PageShell, Reveal, TransitionLink, motion } from "../motion";
 import { Apparatus } from "./Apparatus";
 import { HeroVisual } from "./HeroVisual";
 import { MARQUEE, NAV, PILLARS, STATS, TABS, Pillar } from "./content";
@@ -10,10 +12,11 @@ import "./landing.css";
 export type LandingMode = "paper" | "obsidian";
 
 const MODE_KEY = "prelude_landing_mode";
+const THEME_KEY = "prelude_theme"; // the dashboard's key — kept in step so /console opens in the same mode
 
 export function readLandingMode(): LandingMode {
   try {
-    const stored = localStorage.getItem(MODE_KEY);
+    const stored = localStorage.getItem(MODE_KEY) ?? localStorage.getItem(THEME_KEY);
     if (stored === "paper" || stored === "obsidian") return stored;
   } catch {
     // storage blocked — fall through
@@ -24,34 +27,22 @@ export function readLandingMode(): LandingMode {
 function storeLandingMode(mode: LandingMode): void {
   try {
     localStorage.setItem(MODE_KEY, mode);
+    localStorage.setItem(THEME_KEY, mode);
   } catch {
     // best-effort
   }
-}
-
-function Mark() {
-  return (
-    <span className="l-mark" aria-hidden="true">
-      <svg viewBox="0 0 24 24" width="22" height="22">
-        <rect x="1" y="1" width="22" height="22" rx="4" className="l-mark-box" />
-        <rect x="6" y="10" width="2.5" height="5" className="l-mark-bar" />
-        <rect x="10" y="6" width="2.5" height="12" className="l-mark-bar" />
-        <rect x="14" y="8" width="2.5" height="8" className="l-mark-bar" />
-        <rect x="18" y="11" width="2" height="3" className="l-mark-bar" />
-      </svg>
-    </span>
-  );
+  document.documentElement.dataset.theme = mode;
 }
 
 function ConsoleLink({ className = "" }: { className?: string }) {
   return (
-    <a className={`l-cta ${className}`} href="/console">
+    <TransitionLink className={`l-cta ${className}`} href="/console">
       <span className="l-eyebrow">Open the console</span>
       <span className="l-cta-path">/console</span>
       <span className="l-cta-arrow" aria-hidden="true">
         →
       </span>
-    </a>
+    </TransitionLink>
   );
 }
 
@@ -153,11 +144,13 @@ function Pillars() {
   return (
     <section className={`l-section pillars ${inView ? "in-view" : ""}`} id="pillars" ref={sectionRef}>
       <div className="l-wrap">
-        <div className="l-eyebrow">Our differentiator</div>
-        <h2 className="l-h2">
-          Foundational pillars
-          <span className="l-h2-italic">that a judge can verify</span>
-        </h2>
+        <Reveal>
+          <div className="l-eyebrow">Our differentiator</div>
+          <h2 className="l-h2">
+            Foundational pillars
+            <span className="l-h2-italic">that a judge can verify</span>
+          </h2>
+        </Reveal>
         <div className="pillar-stack">
           {PILLARS.map((p, i) => (
             <article
@@ -223,11 +216,13 @@ function Engineering() {
   return (
     <section className="l-section engineering" id="engineering">
       <div className="l-wrap">
-        <div className="l-eyebrow">Engineering</div>
-        <h2 className="l-h2">
-          Where the work went
-          <span className="l-h2-italic">and what each part refuses to do</span>
-        </h2>
+        <Reveal>
+          <div className="l-eyebrow">Engineering</div>
+          <h2 className="l-h2">
+            Where the work went
+            <span className="l-h2-italic">and what each part refuses to do</span>
+          </h2>
+        </Reveal>
         <div className="eng-panel">
           <div className="eng-tabs" role="tablist" aria-label="Engineering areas">
             {TABS.map((x, i) => (
@@ -246,7 +241,15 @@ function Engineering() {
             ))}
           </div>
           <div className="eng-content" role="tabpanel" id="eng-tabpanel" aria-labelledby={`eng-tab-${t.id}`}>
-            <div className="eng-main">
+            <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={t.id}
+              className="eng-main"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6, transition: { duration: 0.14 } }}
+              transition={{ duration: 0.28, ease: EASE }}
+            >
               <h3 className="eng-title">{t.title}</h3>
               <p className="eng-lede">{t.lede}</p>
               <svg viewBox="0 0 520 240" className="eng-art" aria-hidden="true">
@@ -263,13 +266,23 @@ function Engineering() {
                 <path d="M 360 95 H 440 V 200 H 520" className="eng-art-wire" />
                 <path d="M 0 150 H 40" className="eng-art-wire" />
               </svg>
-            </div>
+            </motion.div>
+            </AnimatePresence>
             <ul className="eng-chips">
-              {t.chips.map((c) => (
-                <li key={c} className="eng-chip">
-                  {c}
-                </li>
-              ))}
+              <AnimatePresence mode="popLayout" initial={false}>
+                {t.chips.map((c, i) => (
+                  <motion.li
+                    key={c}
+                    className="eng-chip"
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, transition: { duration: 0.1 } }}
+                    transition={{ duration: 0.25, delay: i * 0.03, ease: EASE }}
+                  >
+                    {c}
+                  </motion.li>
+                ))}
+              </AnimatePresence>
             </ul>
           </div>
         </div>
@@ -288,6 +301,7 @@ export function Landing() {
   const next: LandingMode = mode === "paper" ? "obsidian" : "paper";
 
   return (
+    <PageShell>
     <div className="landing" data-mode={mode}>
       <div className="l-strip">
         <span className="l-strip-inner">
@@ -310,17 +324,29 @@ export function Landing() {
             ))}
           </nav>
           <div className="l-nav-right">
-            <a className="l-nav-console" href="/console">
+            <TransitionLink className="l-nav-console" href="/console">
               <span className="l-eyebrow">Open the console</span>
               <span className="l-nav-path">/console</span>
-            </a>
+            </TransitionLink>
             <button
               className="l-mode"
               onClick={() => setMode(next)}
               aria-label={`Switch to ${next === "obsidian" ? "dark" : "light"} mode`}
               title={`Switch to ${next === "obsidian" ? "dark" : "light"} mode`}
             >
-              <span aria-hidden="true">{mode === "paper" ? "☾" : "☀"}</span>
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.span
+                  key={mode}
+                  aria-hidden="true"
+                  initial={{ rotate: -90, opacity: 0, scale: 0.6 }}
+                  animate={{ rotate: 0, opacity: 1, scale: 1 }}
+                  exit={{ rotate: 90, opacity: 0, scale: 0.6 }}
+                  transition={{ duration: 0.22 }}
+                  style={{ display: "inline-flex" }}
+                >
+                  {mode === "paper" ? "☾" : "☀"}
+                </motion.span>
+              </AnimatePresence>
             </button>
           </div>
         </div>
@@ -330,17 +356,47 @@ export function Landing() {
         <section className="l-section hero">
           <div className="l-wrap hero-grid">
             <div className="hero-left">
-              <div className="l-eyebrow hero-eyebrow">
+              <motion.div
+                className="l-eyebrow hero-eyebrow"
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, ease: EASE, delay: 0.05 }}
+              >
                 <span className="hero-eyebrow-dot" aria-hidden="true" />
                 Streaming · Verifiable · Refine-not-restart · Live Agent Assist
-              </div>
+              </motion.div>
               <h1 className="hero-title">
-                <span className="hero-title-sans">Retrieval that starts,</span>
-                <span className="hero-title-serif">before the question ends</span>
+                <motion.span
+                  className="hero-title-sans"
+                  initial={{ opacity: 0, y: 28 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.7, ease: EASE, delay: 0.15 }}
+                >
+                  Retrieval that starts,
+                </motion.span>
+                <motion.span
+                  className="hero-title-serif"
+                  initial={{ opacity: 0, y: 28 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.7, ease: EASE, delay: 0.3 }}
+                >
+                  before the question ends
+                </motion.span>
               </h1>
-              <ConsoleLink className="hero-cta" />
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, ease: EASE, delay: 0.5 }}
+              >
+                <ConsoleLink className="hero-cta" />
+              </motion.div>
             </div>
-            <dl className="hero-facts">
+            <motion.dl
+              className="hero-facts"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, ease: EASE, delay: 0.4 }}
+            >
               <div className="hero-fact">
                 <dt className="l-eyebrow">01 · Mission</dt>
                 <dd className="hero-fact-serif">
@@ -363,17 +419,19 @@ export function Landing() {
                   <span className="l-gold">apparatus</span> that makes early retrieval safe.
                 </dd>
               </div>
-            </dl>
+            </motion.dl>
           </div>
           <div className="l-wrap">
-            <HeroVisual />
+            <Reveal>
+              <HeroVisual />
+            </Reveal>
           </div>
         </section>
 
         <section className="stats" aria-label="Measured facts">
           <div className="l-wrap stats-grid">
-            {STATS.map((s) => (
-              <div key={s.label} className="stat">
+            {STATS.map((s, i) => (
+              <Reveal key={s.label} className="stat" delay={i * 0.08}>
                 <div className="stat-value">{s.value}</div>
                 <div className="stat-label">
                   {s.label}
@@ -383,7 +441,7 @@ export function Landing() {
                     </span>
                   )}
                 </div>
-              </div>
+              </Reveal>
             ))}
           </div>
         </section>
@@ -392,10 +450,43 @@ export function Landing() {
 
         <section className="l-section apparatus" id="apparatus">
           <div className="l-wrap">
-            <div className="apparatus-frame">
-              <Apparatus />
-            </div>
-            <div className="apparatus-caption l-eyebrow">Prelude · Measured headroom · The apparatus</div>
+            <Reveal>
+              <div className="apparatus-frame">
+                <Apparatus />
+              </div>
+              <div className="apparatus-caption l-eyebrow">Prelude · Measured headroom · The apparatus</div>
+            </Reveal>
+          </div>
+        </section>
+
+        <section className="l-section recording" id="recording">
+          <div className="l-wrap">
+            <Reveal>
+              <div className="l-eyebrow">Recording</div>
+              <h2 className="l-h2">
+                The console, running
+                <span className="l-h2-italic">on synthetic input, nothing scripted</span>
+              </h2>
+            </Reveal>
+            <Reveal delay={0.1}>
+              <figure className="recording-frame">
+                <video
+                  src="/media/console-demo.webm"
+                  poster="/media/console-demo.png"
+                  muted
+                  autoPlay
+                  loop
+                  playsInline
+                  controls
+                  preload="metadata"
+                  aria-label="Screen recording of the console: chunks typed in, the controller fires, claims form with citations, a late detail refines the answer"
+                />
+                <figcaption className="hero-visual-caption">
+                  Screen recording of /console in Paper mode. The input is synthetic; every decision, retrieval and
+                  verifier verdict on screen is the engine's own.
+                </figcaption>
+              </figure>
+            </Reveal>
           </div>
         </section>
 
@@ -403,6 +494,7 @@ export function Landing() {
 
         <section className="l-section closer">
           <div className="l-wrap">
+            <Reveal>
             <div className="closer-art">
               <svg viewBox="0 0 1000 400" className="closer-svg" aria-hidden="true">
                 <polygon points="20,140 980,20 980,380 20,380" className="closer-box" />
@@ -420,6 +512,7 @@ export function Landing() {
             <div className="closer-cta">
               <ConsoleLink />
             </div>
+            </Reveal>
           </div>
         </section>
       </main>
@@ -436,11 +529,12 @@ export function Landing() {
                 {n.label}
               </a>
             ))}
-            <a href="/console">Console</a>
+            <TransitionLink href="/console">Console</TransitionLink>
           </nav>
         </div>
         <div className="l-wrap l-footer-copy l-eyebrow">© 2026 Prelude · Samsung PRISM Gen AI Hackathon 3.0 · Theme 4</div>
       </footer>
     </div>
+    </PageShell>
   );
 }

@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom/vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 import { Landing, readLandingMode } from "./Landing";
 import { PILLARS, TABS } from "./content";
@@ -35,11 +35,13 @@ describe("Landing", () => {
     for (const p of PILLARS) expect(screen.getByRole("heading", { name: p.title })).toBeInTheDocument();
   });
 
-  it("switches engineering tabs", () => {
+  it("switches engineering tabs", async () => {
     render(<Landing />);
     const second = TABS[1];
     fireEvent.click(screen.getByRole("tab", { name: new RegExp(second.label) }));
-    expect(screen.getByRole("tabpanel")).toHaveTextContent(second.title);
+    // The panel cross-fades (AnimatePresence mode="wait"), so the new text
+    // lands a tick later than the click.
+    await waitFor(() => expect(screen.getByRole("tabpanel")).toHaveTextContent(second.title));
     expect(screen.getByRole("tabpanel")).toHaveTextContent(second.chips[0]);
   });
 
