@@ -135,7 +135,7 @@ One entry per feature from `prelude.md` Section 9 (F1–F19). All marked **Both*
 - **Team contribution:** service boundaries (ADR-0001), healthcheck design, 90-second startup budget.
 - **AI tools used:** Claude Code.
 - **AI assistance:** Dockerfiles, `docker-compose.yml`, `images.yml` (GHCR), the compose-smoke CI job.
-- **As built / modifications:** the compose-smoke job builds and drives one real turn through nginx on every push — the only job that would catch a broken bind mount or upstream name. The first `make up` on a clean machine is dominated by the ml-service image (sentence-transformers + spaCy) and exceeds the 90-second target; a cold build is minutes, a warm start is seconds. *(team to confirm measured cold-build time on the demo machine.)*
+- **As built / modifications:** the compose-smoke job builds and drives one real turn through nginx on every push — the only job that would catch a broken bind mount or upstream name. A cold build is dominated by the ml-service image (sentence-transformers + spaCy): CI's compose-smoke job measures about 2.5 minutes from cold build to a real turn through nginx, above the 90-second target in prelude.md; a warm start is seconds. *(team to confirm the cold-build time on the demo machine.)*
 
 ### F18 — Privacy & Consent Surface
 - **Team contribution:** privacy stance (what is stored, TTL, no user ids), README Privacy & Data section content.
