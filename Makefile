@@ -1,4 +1,4 @@
-.PHONY: up down ingest eval eval-replay bench demo test docs lint
+.PHONY: up down ingest eval eval-ablation bench demo test docs lint
 
 up:
 	docker compose up --build -d
@@ -23,12 +23,23 @@ eval:
 	AI_MODE=$(MODE) docker compose up -d --no-deps ai-service
 	docker compose --profile eval run --rm eval-runner
 
+# Ablation 1 (ADR-0002): dense-only retrieval. Writes its own scorecard
+# next to the main one so the README's numbers (synced from scorecard.md)
+# are never overwritten by an ablation run. gateway is recreated with
+# HYBRID_ENABLED=false for the run and restored afterwards.
+eval-ablation:
+	HYBRID_ENABLED=false docker compose up -d --no-deps gateway
+	docker compose --profile eval run --rm eval-runner python run_eval.py 		--gateway-url http://nginx:80/api 		--output /evaluation/results/scorecard_dense_only.md 		--label "ablation: dense-only retrieval"
+	docker compose up -d --no-deps gateway
+
 bench:
 	@echo "Per-stage latency benchmark — see documentation/Architecture_Brief.md Section 6."
 	docker compose --profile eval run --rm eval-runner python run_eval.py --gateway-url http://nginx:80/api
 
 demo:
-	@echo "Open the dashboard at http://localhost — Guided Demo Tour (F14) not yet implemented; drive turns manually via the UI or evaluation/streams/*.json."
+	@echo "Open the dashboard at http://localhost and press 'Tour' (F14): it plays the seven committed"
+	@echo "evaluation/streams/ through real /turn calls with captions and the telemetry pane open."
+	@echo "Or drive turns manually via the mic/typing input."
 
 test:
 	cd packages/core && python -m pip install -e ".[dev]" -q && python -m pytest -q
@@ -36,11 +47,12 @@ test:
 	cd services/ml-service && python -m pytest -q
 	cd services/vector-service && python -m pytest -q
 	cd services/ai-service && python -m pytest -q
+	cd services/mcp-adapter && python -m pytest -q
 	cd evaluation/harness && python -m pytest -q
 
 docs:
 	@echo "PDF rendering not wired up in this environment — see documentation/*.md as the hand-written source of truth."
 
 lint:
-	@echo "CI hardcode-grep: no eval query/answer/Doc_ID literals allowed under services/"
-	! grep -rEn "camera lens glass|Doc_999.*ignore evidence" services/ --include="*.py"
+	@echo "CI hardcode-grep: no eval query/answer/adversarial-Doc_ID literals allowed under services/"
+	python scripts/check_no_eval_hardcode.py

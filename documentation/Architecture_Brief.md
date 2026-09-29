@@ -20,7 +20,7 @@ See `diagrams/architecture.svg`. Five services behind an nginx edge:
 - **ai-service** — LLM provider adapter (decompose, synthesize), live/record/offline/replay modes, cost metering.
 - **eval-runner** — stream playback and scorecard generation, eval compose profile only.
 
-Plus Redis (session state, 30-minute TTL) and Qdrant (dense index). Full boundary justification and measured hop costs (1–3 ms): [ADR-0001](adr/0001-service-boundaries.md). `docker compose up` brings up all seven components with healthchecks in ≤ 90 s.
+Plus Redis (session state, 30-minute TTL) and Qdrant (dense index). Full boundary justification and measured hop costs (1–3 ms): [ADR-0001](adr/0001-service-boundaries.md). `docker compose up` brings up all seven components with healthchecks; a warm start is seconds, and CI's compose-smoke job (cold build, ingest, one real turn through nginx) completes in about 2.5 minutes — the ml-service image (sentence-transformers + spaCy) dominates a cold build.
 
 ## 4. Core mechanisms
 
@@ -65,7 +65,7 @@ A customer says "My Galaxy phone won't turn on, I bought it—" The controller h
 
 - No incremental re-ingestion in v1 — corpus updates require a full re-index; acceptable because ingestion is one-time and batched for the hackathon window, called out explicitly rather than hidden.
 - No authentication/authorization beyond session-token verification — appropriate for a single-tenant demo deployment behind one nginx edge, not production multi-tenancy.
-- The logistic-regression controller ablation is not tuned as extensively as the rule policy — it exists to produce a comparison number, not to be a production-ready alternative.
+- The logistic-regression controller (ADR-0003's v2) is designed but not built; only the rule policy ships, so ablation 2 has no comparison number. Ablation 1 (dense-only retrieval) runs via `make eval-ablation`.
 - On-device retrieval (Section "What's next") is sized and argued, not built.
 
 ## 9. Comparison to related work

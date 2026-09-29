@@ -23,12 +23,46 @@ export interface ClaimDiff {
   unchanged: string[];
 }
 
+/** One hit from this turn's retrieval set — prism_core.schemas.RetrievalHit
+ * plus its citation_id, exactly as the gateway's /turn response serialises
+ * it. Every provenance field is what vector-service measured; null means
+ * "not applicable" (e.g. no dense rank for a BM25-only hit). */
+export interface EvidenceHit {
+  citation_id: string;
+  doc_id: string;
+  section: string;
+  text: string;
+  score: number;
+  source: string;
+  doc_title: string | null;
+  heading: string | null;
+  version: number | null;
+  effective_date: string | null;
+  bm25_rank: number | null;
+  dense_rank: number | null;
+  rrf_score: number | null;
+  rerank_rank: number | null;
+  sub_query: string | null;
+  cache_hit: boolean;
+}
+
 export interface TurnResponse {
   trace_id: string;
   decision: Decision;
   reason_code: string;
   claims: Claim[];
   diff: ClaimDiff;
+  evidence?: EvidenceHit[];
+}
+
+/** The features the controller evaluated on one chunk, as recorded on the
+ * controller_decision event (prism_core.controller.ChunkFeatures). */
+export interface ChunkFeatures {
+  content_tokens: number;
+  entities: string[];
+  clause_boundary: boolean;
+  embedding_drift: number;
+  is_presentation_turn: boolean;
 }
 
 export interface TelemetryEvent {
@@ -42,8 +76,11 @@ export interface TelemetryEvent {
   decision?: Decision;
   reason_code?: string;
   chunk_index?: number;
+  features?: ChunkFeatures | null;
   doc_ids?: string[];
   hybrid_flag?: boolean;
+  cache_hit?: boolean;
+  cache_similarity?: number | null;
   latency_ms?: number;
   sub_queries?: string[];
   sub_query?: string;
@@ -61,6 +98,13 @@ export interface HealthResponse {
   status: string;
   ai_mode?: string;
   ml_backend?: string;
+  session_ttl_seconds?: number;
+}
+
+export interface SessionStartResponse {
+  session_id: string;
+  token: string;
+  session_ttl_seconds?: number;
 }
 
 export interface CostResponse {
@@ -111,6 +155,20 @@ const REASON_SENTENCES: Record<string, string> = {
 
 export function reasonSentence(reasonCode: string): string {
   return REASON_SENTENCES[reasonCode] ?? reasonCode;
+}
+
+/** One line describing what the controller saw on a chunk, from the
+ * features it actually recorded — used by the ruler tooltip and the lamp. */
+export function featureSummary(features: ChunkFeatures | null | undefined): string {
+  if (!features) return "features not recorded";
+  const parts = [
+    features.entities.length > 0 ? `anchors: ${features.entities.join(", ")}` : "no anchor",
+    `drift ${features.embedding_drift.toFixed(2)}`,
+    features.clause_boundary ? "clause end" : "clause open",
+    `${features.content_tokens} content token${features.content_tokens === 1 ? "" : "s"}`,
+  ];
+  if (features.is_presentation_turn) parts.push("presentation turn");
+  return parts.join(" · ");
 }
 
 // citation_id is always "Doc_ID §Section" (schemas/output_record.schema.json's

@@ -3,7 +3,11 @@
   "$id": "https://prelude.local/schemas/events.schema.json",
   "title": "Prelude telemetry event",
   "type": "object",
-  "required": ["event", "trace_id", "ts"],
+  "required": [
+    "event",
+    "trace_id",
+    "ts"
+  ],
   "properties": {
     "event": {
       "type": "string",
@@ -19,30 +23,153 @@
         "hashchain_link"
       ]
     },
-    "trace_id": { "type": "string" },
-    "session_id_hash": { "type": ["string", "null"] },
-    "ts": { "type": "string", "format": "date-time" },
-    "decision": { "type": "string", "enum": ["wait", "retrieve", "no_retrieval"] },
-    "reason_code": { "type": "string" },
-    "chunk_index": { "type": "integer" },
-    "doc_ids": { "type": "array", "items": { "type": "string" } },
-    "hybrid_flag": { "type": "boolean" },
-    "latency_ms": { "type": "number" },
-    "sub_queries": { "type": "array", "items": { "type": "string" } },
-    "source": { "type": "string", "enum": ["live", "record", "offline", "replay"] },
-    "claim_id": { "type": "string" },
-    "status": { "type": "string", "enum": ["verified", "uncertainty"] },
-    "added": { "type": "array", "items": { "type": "string" } },
-    "superseded": { "type": "array", "items": { "type": "string" } },
-    "unchanged": { "type": "array", "items": { "type": "string" } },
-    "tokens": { "type": "integer" },
-    "usd_estimate": { "type": "number" },
-    "cumulative_session_usd": { "type": "number" },
-    "event_id": { "type": "string" },
-    "prev_hash": { "type": "string" },
-    "hash": { "type": "string" },
-    "sub_query": { "type": "string" },
-    "citation_id": { "type": ["string", "null"] }
+    "trace_id": {
+      "type": "string"
+    },
+    "session_id_hash": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "ts": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "decision": {
+      "type": "string",
+      "enum": [
+        "wait",
+        "retrieve",
+        "no_retrieval"
+      ]
+    },
+    "reason_code": {
+      "type": "string"
+    },
+    "chunk_index": {
+      "type": "integer"
+    },
+    "doc_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "hybrid_flag": {
+      "type": "boolean"
+    },
+    "latency_ms": {
+      "type": "number"
+    },
+    "sub_queries": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "live",
+        "record",
+        "offline",
+        "replay"
+      ]
+    },
+    "claim_id": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "verified",
+        "uncertainty"
+      ]
+    },
+    "added": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "superseded": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "unchanged": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "tokens": {
+      "type": "integer"
+    },
+    "usd_estimate": {
+      "type": "number"
+    },
+    "cumulative_session_usd": {
+      "type": "number"
+    },
+    "event_id": {
+      "type": "string"
+    },
+    "prev_hash": {
+      "type": "string"
+    },
+    "hash": {
+      "type": "string"
+    },
+    "sub_query": {
+      "type": "string"
+    },
+    "citation_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "cache_hit": {
+      "type": "boolean",
+      "description": "retrieval_completed: hits were served from the session semantic cache (F9)"
+    },
+    "cache_similarity": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "description": "retrieval_completed: cosine similarity to the cached sub-query, when cache_hit"
+    },
+    "features": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "controller_decision: the per-chunk features the policy evaluated",
+      "properties": {
+        "content_tokens": {
+          "type": "integer"
+        },
+        "entities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "clause_boundary": {
+          "type": "boolean"
+        },
+        "embedding_drift": {
+          "type": "number"
+        },
+        "is_presentation_turn": {
+          "type": "boolean"
+        }
+      }
+    }
   },
   "additionalProperties": true
 }

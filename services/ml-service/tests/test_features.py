@@ -18,7 +18,7 @@ def test_content_token_count_ignores_pure_whitespace():
 
 
 def test_presentation_turn_detects_shorten_request():
-    assert is_presentation_turn("can you say that again, shorter") is True
+    assert is_presentation_turn("could you repeat that, but shorter") is True
     assert is_presentation_turn("my phone is broken") is False
 
 

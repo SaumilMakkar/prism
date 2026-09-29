@@ -1,4 +1,11 @@
-import { CostResponse, DemoStream, HealthResponse, TelemetryEvent, TurnResponse } from "./types";
+import {
+  CostResponse,
+  DemoStream,
+  HealthResponse,
+  SessionStartResponse,
+  TelemetryEvent,
+  TurnResponse,
+} from "./types";
 
 const API_BASE = "/api";
 
@@ -12,7 +19,7 @@ export async function getHealth(): Promise<HealthResponse> {
   return get<HealthResponse>("/healthz");
 }
 
-export async function startSession(): Promise<{ session_id: string; token: string }> {
+export async function startSession(): Promise<SessionStartResponse> {
   const resp = await fetch(`${API_BASE}/session/start`, { method: "POST" });
   if (!resp.ok) throw new Error(`session/start failed: ${resp.status}`);
   return resp.json();

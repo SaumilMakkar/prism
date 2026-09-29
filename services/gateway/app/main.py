@@ -10,7 +10,7 @@ import redis
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-from app.claims.store import ClaimGraphStore, InMemoryStore
+from app.claims.store import SESSION_TTL_SECONDS, ClaimGraphStore, InMemoryStore
 from app.controller.controller import SessionControllers
 from app.orchestrator.orchestrator import Orchestrator
 from app.security.security import hash_session_id, redact_pii, sign_session_token, verify_session_token
@@ -43,6 +43,7 @@ _orchestrator = Orchestrator(
 class SessionStartResponse(BaseModel):
     session_id: str
     token: str
+    session_ttl_seconds: int
 
 
 class ChunkRequest(BaseModel):
@@ -73,7 +74,12 @@ def healthz() -> dict:
             ml_backend = client.get(f"{ML_SERVICE_URL}/healthz").json().get("backend", "unknown")
         except Exception:
             pass
-    return {"status": "ok", "ai_mode": ai_mode, "ml_backend": ml_backend}
+    return {
+        "status": "ok",
+        "ai_mode": ai_mode,
+        "ml_backend": ml_backend,
+        "session_ttl_seconds": SESSION_TTL_SECONDS,
+    }
 
 
 @app.get("/cost/{token}")
@@ -106,7 +112,11 @@ def get_demo_stream(name: str) -> dict:
 @app.post("/session/start", response_model=SessionStartResponse)
 def start_session() -> SessionStartResponse:
     session_id = str(uuid.uuid4())
-    return SessionStartResponse(session_id=session_id, token=sign_session_token(session_id))
+    return SessionStartResponse(
+        session_id=session_id,
+        token=sign_session_token(session_id),
+        session_ttl_seconds=SESSION_TTL_SECONDS,
+    )
 
 
 @app.post("/turn/{token}")

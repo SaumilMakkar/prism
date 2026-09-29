@@ -26,7 +26,7 @@ A RAG engine that retrieves while the user is still speaking, splits one sentenc
 ## Prerequisites
 
 - Docker + Docker Compose v2
-- (Optional, for `AI_MODE=live`) an OpenAI API key — `make eval` and the default demo profile run in `replay` mode and need no key ([ADR-0007](documentation/adr/0007-llm-choice-and-replay.md))
+- (Optional, for `AI_MODE=live`) an OpenAI API key — `make eval` and the default demo profile run in `offline` mode and need no key; `MODE=replay` serves committed trajectories ([ADR-0007](documentation/adr/0007-llm-choice-and-replay.md))
 
 ## Setup
 
@@ -51,6 +51,7 @@ See [documentation/VIDEO_SCRIPT.md](documentation/VIDEO_SCRIPT.md) for the timed
 ```
 make eval          # offline mode (default), no API key
 make eval MODE=live
+make eval-ablation  # dense-only retrieval, writes scorecard_dense_only.md
 make test           # unit tests across packages/core and all services
 ```
 
@@ -64,10 +65,11 @@ prism/
 ├── .github/workflows/        ci.yml, images.yml
 ├── packages/core/            schemas, controller policy, fusion, claim graph, hashchain — pure, unit-tested
 ├── services/
-│   ├── gateway/               controller, orchestrator, claims, telemetry, security
+│   ├── gateway/               controller, orchestrator, semantic cache, claims, verifier, telemetry, security
 │   ├── ml-service/             embed, features, rerank, nli
 │   ├── vector-service/         ingest, chunking, search, fusion
 │   ├── ai-service/              providers, decompose, synthesize, replay, cost
+│   ├── mcp-adapter/             Prelude as MCP tools over the gateway API (F19)
 │   ├── web/                    React + Vite + TS dashboard
 │   └── eval-runner/
 ├── prompts/                  versioned templates

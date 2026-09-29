@@ -21,7 +21,7 @@ def test_decompose_splits_compound_question_into_multiple_sub_queries():
     provider = OfflineProvider()
     raw = provider.complete(
         DECOMPOSE_SYSTEM,
-        "I bought this phone abroad and it charges really slowly, is it still under warranty and how do I fix the charging?",
+        "My tablet screen flickers and the battery drains fast, can I get it repaired and is there a fee for that?",
         "offline-model",
     )
     sub_queries = parse_decompose_response(raw, fallback_text="unused")
@@ -31,7 +31,7 @@ def test_decompose_splits_compound_question_into_multiple_sub_queries():
 def test_decompose_drops_bare_filler_fragment():
     provider = OfflineProvider()
     raw = provider.complete(
-        DECOMPOSE_SYSTEM, "Oh, and I bought it abroad, does that change anything?", "offline-model"
+        DECOMPOSE_SYSTEM, "Oh, and I dropped it last week, does that matter?", "offline-model"
     )
     sub_queries = parse_decompose_response(raw, fallback_text="unused")
     assert all(q.lower().strip("?") != "oh" for q in sub_queries)
@@ -71,16 +71,17 @@ def test_synthesize_returns_no_claims_when_no_evidence_relates_to_question():
 
 def test_synthesize_rejects_chunk_with_only_incidental_word_overlap():
     # A chunk about repair-SLA turnaround time that happens to mention
-    # "camera" must not be treated as answering a question about the cost
-    # of replacing camera lens glass — one shared word out of four content
-    # words is topical proximity, not an answer (this was a real false
-    # positive caught by an end-to-end run: see evaluation streams
-    # no_evidence/no_evidence_camera_lens_cost.json).
+    # "speaker" must not be treated as answering a question about the cost
+    # of replacing a speaker grille — one shared word out of six content
+    # words is topical proximity, not an answer. This was a real false
+    # positive caught by an end-to-end run over the no_evidence eval
+    # stream; the fixture here is a synthetic analogue, never the stream's
+    # own text (CLAUDE.md rule 2).
     provider = OfflineProvider()
     user = (
-        "Evidence:\n[SLA_001 §8.2]\nRepairs requiring a motherboard or camera "
+        "Evidence:\n[SLA_001 §8.2]\nRepairs requiring a motherboard or speaker "
         "module replacement are completed within 7 business days, subject to parts "
-        "availability.\n\nQuestion: how much does it cost to replace the camera lens glass specifically"
+        "availability.\n\nQuestion: what would replacing the speaker grille cost specifically"
     )
     raw = provider.complete(SYNTHESIZE_SYSTEM, user, "offline-model")
     data = json.loads(raw)
