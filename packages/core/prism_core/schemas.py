@@ -36,6 +36,22 @@ class RetrievalHit(BaseModel):
     score: float
     source: str = Field(description="'bm25' | 'dense' | 'fused'")
 
+    # Provenance (ADR-0002) — every field below is what the retrieval
+    # pipeline actually measured for this hit, so the evidence drawer can
+    # show it instead of inventing it. All optional: a hit that came from
+    # a single list has no rank in the other, and a cache hit reuses the
+    # ranks of the search it was copied from.
+    doc_title: Optional[str] = None
+    heading: Optional[str] = None
+    version: Optional[int] = None
+    effective_date: Optional[str] = None
+    bm25_rank: Optional[int] = Field(default=None, description="1-based rank in the BM25 list")
+    dense_rank: Optional[int] = Field(default=None, description="1-based rank in the dense list")
+    rrf_score: Optional[float] = None
+    rerank_rank: Optional[int] = Field(default=None, description="1-based rank after cross-encoder rerank")
+    sub_query: Optional[str] = Field(default=None, description="the sub-query that retrieved this hit")
+    cache_hit: bool = Field(default=False, description="served from the session semantic cache (F9)")
+
     @property
     def citation_id(self) -> str:
         return f"{self.doc_id} §{self.section}"
