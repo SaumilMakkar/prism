@@ -88,7 +88,9 @@ export function Header({
   return (
     <header className="header">
       <div className="header-left">
-        <span className="brand">Prelude</span>
+        <a className="brand" href="/" title="Back to the front page">
+          Prelude
+        </a>
         {hashed && (
           <span className="badge" title="Session id as hashed by the gateway; matches telemetry session_id_hash">
             session {hashed.slice(0, 8)}…
