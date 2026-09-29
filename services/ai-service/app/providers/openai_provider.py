@@ -16,13 +16,27 @@ class ChatProvider(Protocol):
 
 
 class OpenAIProvider:
-    def __init__(self) -> None:
-        from openai import OpenAI
+    """Client is built on first use, not at import: a missing key or an SDK
+    problem then surfaces as a clear error on the first live call instead of
+    crashing the service at boot (which takes the whole compose stack down
+    through depends_on)."""
 
-        self._client = OpenAI()
+    def __init__(self) -> None:
+        self._client = None
+
+    def _get_client(self):
+        if self._client is None:
+            if not os.environ.get("OPENAI_API_KEY"):
+                raise RuntimeError(
+                    "AI_MODE=live/record needs OPENAI_API_KEY; use AI_MODE=offline (default) for a key-free run"
+                )
+            from openai import OpenAI
+
+            self._client = OpenAI()
+        return self._client
 
     def complete(self, system: str, user: str, model: str) -> str:
-        response = self._client.chat.completions.create(
+        response = self._get_client().chat.completions.create(
             model=model,
             messages=[
                 {"role": "system", "content": system},
