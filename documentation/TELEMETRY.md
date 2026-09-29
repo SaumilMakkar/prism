@@ -28,9 +28,9 @@ A single utterance can span multiple `trace_id`s if the controller Waits across 
 
 | Event | Emitted by | Key fields |
 |---|---|---|
-| `controller_decision` | gateway | trace_id, decision (`wait`/`retrieve`/`no_retrieval`), reason_code, chunk_index |
+| `controller_decision` | gateway | trace_id, decision (`wait`/`retrieve`/`no_retrieval`), reason_code, chunk_index, features (entities, embedding_drift, clause_boundary, content_tokens, is_presentation_turn), latency_ms |
 | `feature_extracted` | ml-service | trace_id, entities, drift_score, clause_boundary, content_tokens |
-| `retrieval_completed` | vector-service | trace_id, doc_ids, hybrid_flag, latency_ms |
+| `retrieval_completed` | gateway (orchestrator) | trace_id, sub_query, doc_ids, hybrid_flag, cache_hit, cache_similarity (F9), latency_ms |
 | `decompose_completed` | ai-service | trace_id, sub_queries, source (`live`/`replay`) |
 | `synthesis_completed` | ai-service | trace_id, claim_ids, source |
 | `claim_verified` | gateway (verifier) | trace_id, claim_id, status (`verified`/`uncertainty`), reason_code |

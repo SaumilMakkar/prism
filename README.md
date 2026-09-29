@@ -51,6 +51,7 @@ See [documentation/VIDEO_SCRIPT.md](documentation/VIDEO_SCRIPT.md) for the timed
 ```
 make eval          # offline mode (default), no API key
 make eval MODE=live
+make eval-ablation  # dense-only retrieval, writes scorecard_dense_only.md
 make test           # unit tests across packages/core and all services
 ```
 
@@ -64,10 +65,11 @@ prism/
 ├── .github/workflows/        ci.yml, images.yml
 ├── packages/core/            schemas, controller policy, fusion, claim graph, hashchain — pure, unit-tested
 ├── services/
-│   ├── gateway/               controller, orchestrator, claims, telemetry, security
+│   ├── gateway/               controller, orchestrator, semantic cache, claims, verifier, telemetry, security
 │   ├── ml-service/             embed, features, rerank, nli
 │   ├── vector-service/         ingest, chunking, search, fusion
 │   ├── ai-service/              providers, decompose, synthesize, replay, cost
+│   ├── mcp-adapter/             Prelude as MCP tools over the gateway API (F19)
 │   ├── web/                    React + Vite + TS dashboard
 │   └── eval-runner/
 ├── prompts/                  versioned templates

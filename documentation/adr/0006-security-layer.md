@@ -21,7 +21,7 @@ Defense is layered, each layer owned by a specific point in the request path:
 | T7 — Cross-session data leakage | Session id is the only key; no cross-session index, cache, or profile is built (explicit rejection of "project suggestions," Section 9) | `packages/core` (claim graph) |
 | T8 — Hardcoded eval answers leaking into services | `scripts/check_no_eval_hardcode.py` derives the forbidden literals from `evaluation/streams/` (every query chunk + the adversarial doc id) and fails the build on a match anywhere under `services/` | `.github/workflows/ci.yml`, `make lint` |
 | T9 — Container/dependency vulnerabilities | Pinned lockfiles across all services, Trivy filesystem scan in CI (CRITICAL, fixable only), slim base images | `.github/workflows/ci.yml` |
-| T10 — Cost-abuse via unbounded LLM calls | Decompose cap of 4 sub-queries, cost meter with a per-session ceiling in `ai-service` (semantic cache dedupe, F9, not built as of 2026-09-29) | `ai-service/app/cost` |
+| T10 — Cost-abuse via unbounded LLM calls | Decompose cap of 4 sub-queries, session semantic cache dedupe (F9, `gateway/app/cache`), cost meter with a per-session ceiling in `ai-service` | `ai-service/app/cost`, `gateway/app/cache` |
 
 ## Consequences
 
