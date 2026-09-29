@@ -23,7 +23,7 @@ export const TOUR_STEPS: TourStep[] = [
 
 export function useGuidedTour(
   send: (text: string) => Promise<unknown>,
-  startNewUtterance: () => void,
+  startNewUtterance: (safeChunkIndex?: number | null) => void,
   onFinish: () => void
 ) {
   const [running, setRunning] = useState(false);
@@ -38,7 +38,10 @@ export function useGuidedTour(
     } catch {
       return; // stream not available in this deployment — skip silently
     }
-    startNewUtterance();
+    // The stream's offline-labelled safe point drives the ruler's hollow
+    // marker (moment 7: headroom as one number) — it is a label from the
+    // committed eval stream, fetched at runtime, never bundled.
+    startNewUtterance(stream.expected_safe_chunk_index ?? null);
     for (const chunk of stream.chunks) {
       if (cancelRef.current) return;
       await send(chunk);

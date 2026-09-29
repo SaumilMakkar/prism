@@ -98,4 +98,63 @@ describe("reducer", () => {
     });
     expect(state.claims).toEqual([claim]);
   });
+
+  it("accumulates evidence by citation id across turns and keeps the newest hit", () => {
+    let state = reducer(initialState, { type: "NEW_UTTERANCE" });
+    const hit = {
+      citation_id: "DOC_A §1.1",
+      doc_id: "DOC_A",
+      section: "1.1",
+      text: "first",
+      score: 1,
+      source: "fused",
+      doc_title: null,
+      heading: null,
+      version: null,
+      effective_date: null,
+      bm25_rank: 1,
+      dense_rank: null,
+      rrf_score: null,
+      rerank_rank: null,
+      sub_query: "q1",
+      cache_hit: false,
+    };
+    state = reducer(state, {
+      type: "TURN_RECEIVED",
+      text: "chunk 0",
+      turn: fakeTurn({ decision: "retrieve", evidence: [hit] }),
+      chunkIndex: 0,
+    });
+    state = reducer(state, {
+      type: "TURN_RECEIVED",
+      text: "chunk 1",
+      turn: fakeTurn({ decision: "retrieve", evidence: [{ ...hit, text: "second", cache_hit: true }] }),
+      chunkIndex: 1,
+    });
+    expect(state.evidence["DOC_A §1.1"].text).toBe("second");
+    expect(state.evidence["DOC_A §1.1"].cache_hit).toBe(true);
+  });
+
+  it("records the stream's safe chunk index on a new utterance", () => {
+    const state = reducer(initialState, { type: "NEW_UTTERANCE", safeChunkIndex: 1 });
+    expect(state.current!.safeChunkIndex).toBe(1);
+  });
+
+  it("drops everything except service health when the session expires", () => {
+    let state = reducer(initialState, {
+      type: "SESSION_STARTED",
+      token: "tok",
+      sessionId: "sid",
+      ttlSeconds: 1800,
+    });
+    state = reducer(state, { type: "HEALTH_RECEIVED", health: { status: "ok" } });
+    state = reducer(state, { type: "NEW_UTTERANCE" });
+    state = reducer(state, { type: "TURN_RECEIVED", text: "x", turn: fakeTurn({}), chunkIndex: 0 });
+    state = reducer(state, { type: "SESSION_EXPIRED" });
+    expect(state.token).toBeNull();
+    expect(state.claims).toEqual([]);
+    expect(state.current).toBeNull();
+    expect(state.expired).toBe(true);
+    expect(state.health).toEqual({ status: "ok" });
+  });
 });

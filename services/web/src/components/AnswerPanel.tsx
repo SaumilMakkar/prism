@@ -75,7 +75,7 @@ export function AnswerPanel({
     : verified.filter((c) => !diff?.superseded.includes(c.claim_id));
 
   return (
-    <section className="answer-panel">
+    <section className="answer-panel" aria-live="polite">
       <div className="answer-header">
         <span className="version-tab">v{version}</span>
         <label className="toggle">
@@ -90,7 +90,7 @@ export function AnswerPanel({
       <div className="answer-cost-note">{costSummary}</div>
 
       {visibleVerified.length === 0 && uncertain.length === 0 && (
-        <div className="answer-empty">No claims yet — send a chunk to begin.</div>
+        <div className="answer-empty">No claims yet. Start the tour or take the mic; verified claims appear here with their citations.</div>
       )}
 
       {prose ? (

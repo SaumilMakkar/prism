@@ -7,9 +7,11 @@ interface SubQueryRow {
   verifiedCount: number;
   droppedCount: number;
   source: string | null;
+  cacheHit: boolean;
+  cacheSimilarity: number | null;
 }
 
-function rowsFor(events: TelemetryEvent[], traceId: string, claims: Claim[]): SubQueryRow[] {
+export function rowsFor(events: TelemetryEvent[], traceId: string, claims: Claim[]): SubQueryRow[] {
   const traceEvents = events.filter((e) => e.trace_id === traceId);
   const decompose = traceEvents.find((e) => e.event === "decompose_completed");
   const subQueries = decompose?.sub_queries ?? [];
@@ -26,6 +28,8 @@ function rowsFor(events: TelemetryEvent[], traceId: string, claims: Claim[]): Su
       verifiedCount: rowClaims.filter((c) => c.status === "verified").length,
       droppedCount: rowClaims.filter((c) => c.status === "uncertainty").length,
       source: synthesis?.source ?? null,
+      cacheHit: retrieval?.cache_hit === true,
+      cacheSimilarity: retrieval?.cache_similarity ?? null,
     };
   });
 }
@@ -72,7 +76,14 @@ export function SubQueryFanout({
             <li key={i} className="fanout-row">
               <span className="fanout-text">{row.text}</span>
               <span className="fanout-meta">
-                <span className="fanout-status">done</span>
+                <span className={row.cacheHit ? "fanout-cached" : "fanout-status"}>
+                  {row.cacheHit ? "cached" : "done"}
+                </span>
+                {row.cacheHit && row.cacheSimilarity !== null && (
+                  <span title="cosine similarity to the sub-query whose hits were reused">
+                    sim {row.cacheSimilarity.toFixed(2)}
+                  </span>
+                )}
                 <span>k={row.docIds.length}</span>
                 {row.latencyMs !== null && <span>{Math.round(row.latencyMs)} ms</span>}
                 {row.source && <span className="badge-source">{row.source}</span>}

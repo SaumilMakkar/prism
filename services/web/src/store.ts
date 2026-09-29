@@ -1,6 +1,6 @@
 import { useCallback, useReducer, useRef } from "react";
 import * as api from "./api";
-import { Claim, Decision, HealthResponse, TelemetryEvent, TurnResponse } from "./types";
+import { Claim, Decision, EvidenceHit, HealthResponse, TelemetryEvent, TurnResponse } from "./types";
 
 export interface ChunkRecord {
   index: number;
@@ -15,41 +15,63 @@ export interface UtteranceRecord {
   id: string;
   chunks: ChunkRecord[];
   firedChunkIndex: number | null; // first RETRIEVE in this utterance
+  // The offline-labelled safe point, when known. It only exists for the
+  // committed eval streams (the guided tour reads it from the stream file
+  // the gateway serves); live mic input has none, and the ruler says so.
+  safeChunkIndex: number | null;
 }
+
+export type Connection = "unknown" | "ok" | "down";
 
 export interface State {
   token: string | null;
+  sessionId: string | null;
+  sessionStartedAt: number | null; // epoch ms — drives the TTL countdown
+  sessionTtlSeconds: number | null;
+  expired: boolean;
   chunkIndex: number;
   utteranceStartedAt: number | null;
   utterances: UtteranceRecord[]; // completed utterances (history rail)
   current: UtteranceRecord | null; // the live one
   lastTurn: TurnResponse | null;
   claims: Claim[];
+  // Most recent hit per citation id, accumulated across the session's turns
+  // so a claim that survived from v1 still opens its evidence in v3.
+  evidence: Record<string, EvidenceHit>;
   telemetry: TelemetryEvent[];
   health: HealthResponse | null;
+  connection: Connection;
   cost: number;
   error: string | null;
 }
 
 export type Action =
-  | { type: "SESSION_STARTED"; token: string }
+  | { type: "SESSION_STARTED"; token: string; sessionId: string; ttlSeconds: number | null }
+  | { type: "SESSION_EXPIRED" }
   | { type: "TURN_RECEIVED"; text: string; turn: TurnResponse; chunkIndex: number }
   | { type: "TELEMETRY_RECEIVED"; events: TelemetryEvent[] }
   | { type: "HEALTH_RECEIVED"; health: HealthResponse }
+  | { type: "HEALTH_FAILED" }
   | { type: "COST_RECEIVED"; cost: number }
-  | { type: "NEW_UTTERANCE" }
+  | { type: "NEW_UTTERANCE"; safeChunkIndex?: number | null }
   | { type: "ERROR"; message: string };
 
 export const initialState: State = {
   token: null,
+  sessionId: null,
+  sessionStartedAt: null,
+  sessionTtlSeconds: null,
+  expired: false,
   chunkIndex: 0,
   utteranceStartedAt: null,
   utterances: [],
   current: null,
   lastTurn: null,
   claims: [],
+  evidence: {},
   telemetry: [],
   health: null,
+  connection: "unknown",
   cost: 0,
   error: null,
 };
@@ -57,21 +79,44 @@ export const initialState: State = {
 export function reducer(state: State, action: Action): State {
   switch (action.type) {
     case "SESSION_STARTED":
-      return { ...state, token: action.token, error: null };
+      return {
+        ...state,
+        token: action.token,
+        sessionId: action.sessionId,
+        sessionStartedAt: Date.now(),
+        sessionTtlSeconds: action.ttlSeconds,
+        expired: false,
+        error: null,
+      };
+
+    case "SESSION_EXPIRED":
+      // T6: nothing survives expiry — the dashboard drops everything it
+      // held for the session too, keeping only service health.
+      return { ...initialState, health: state.health, connection: state.connection, expired: true };
 
     case "NEW_UTTERANCE": {
       const utterances = state.current ? [...state.utterances, state.current] : state.utterances;
       return {
         ...state,
         utterances,
-        current: { id: crypto.randomUUID(), chunks: [], firedChunkIndex: null },
+        current: {
+          id: crypto.randomUUID(),
+          chunks: [],
+          firedChunkIndex: null,
+          safeChunkIndex: action.safeChunkIndex ?? null,
+        },
         utteranceStartedAt: performance.now(),
       };
     }
 
     case "TURN_RECEIVED": {
       const startedAt = state.utteranceStartedAt ?? performance.now();
-      const current: UtteranceRecord = state.current ?? { id: crypto.randomUUID(), chunks: [], firedChunkIndex: null };
+      const current: UtteranceRecord = state.current ?? {
+        id: crypto.randomUUID(),
+        chunks: [],
+        firedChunkIndex: null,
+        safeChunkIndex: null,
+      };
       const chunk: ChunkRecord = {
         index: action.chunkIndex,
         text: action.text,
@@ -84,6 +129,11 @@ export function reducer(state: State, action: Action): State {
       const firedChunkIndex =
         current.firedChunkIndex ?? (action.turn.decision === "retrieve" ? action.chunkIndex : null);
 
+      const evidence = { ...state.evidence };
+      for (const hit of action.turn.evidence ?? []) {
+        evidence[hit.citation_id] = hit;
+      }
+
       return {
         ...state,
         chunkIndex: action.chunkIndex + 1,
@@ -91,6 +141,7 @@ export function reducer(state: State, action: Action): State {
         current: { ...current, chunks, firedChunkIndex },
         lastTurn: action.turn,
         claims: action.turn.claims,
+        evidence,
         error: null,
       };
     }
@@ -99,7 +150,10 @@ export function reducer(state: State, action: Action): State {
       return { ...state, telemetry: action.events };
 
     case "HEALTH_RECEIVED":
-      return { ...state, health: action.health };
+      return { ...state, health: action.health, connection: "ok" };
+
+    case "HEALTH_FAILED":
+      return { ...state, connection: "down" };
 
     case "COST_RECEIVED":
       return { ...state, cost: action.cost };
@@ -123,11 +177,18 @@ export function usePreludeSession() {
 
   const ensureSession = useCallback(async (): Promise<string> => {
     if (tokenRef.current) return tokenRef.current;
-    const { token } = await api.startSession();
+    const { token, session_id, session_ttl_seconds } = await api.startSession();
     tokenRef.current = token;
-    dispatch({ type: "SESSION_STARTED", token });
+    nextChunkIndexRef.current = 0;
+    dispatch({ type: "SESSION_STARTED", token, sessionId: session_id, ttlSeconds: session_ttl_seconds ?? null });
     dispatch({ type: "NEW_UTTERANCE" });
     return token;
+  }, []);
+
+  const expireSession = useCallback(() => {
+    tokenRef.current = null;
+    nextChunkIndexRef.current = 0;
+    dispatch({ type: "SESSION_EXPIRED" });
   }, []);
 
   const refreshTelemetry = useCallback(async () => {
@@ -150,9 +211,9 @@ export function usePreludeSession() {
     }
   }, []);
 
-  const startNewUtterance = useCallback(() => {
+  const startNewUtterance = useCallback((safeChunkIndex: number | null = null) => {
     nextChunkIndexRef.current = 0;
-    dispatch({ type: "NEW_UTTERANCE" });
+    dispatch({ type: "NEW_UTTERANCE", safeChunkIndex });
   }, []);
 
   const send = useCallback(
@@ -178,9 +239,9 @@ export function usePreludeSession() {
       const health = await api.getHealth();
       dispatch({ type: "HEALTH_RECEIVED", health });
     } catch {
-      // header badges just stay blank
+      dispatch({ type: "HEALTH_FAILED" });
     }
   }, []);
 
-  return { state, send, startNewUtterance, loadHealth, ensureSession };
+  return { state, send, startNewUtterance, loadHealth, ensureSession, expireSession };
 }

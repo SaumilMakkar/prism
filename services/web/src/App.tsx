@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AnswerPanel } from "./components/AnswerPanel";
 import { ControllerLamp } from "./components/ControllerLamp";
 import { EvidenceDrawer } from "./components/EvidenceDrawer";
+import { EvidenceGraph } from "./components/EvidenceGraph";
 import { TourOverlay, useGuidedTour } from "./components/GuidedTour";
 import { Header } from "./components/Header";
 import { LatencyWaterfall } from "./components/LatencyWaterfall";
@@ -13,11 +14,17 @@ import { TranscriptBand } from "./components/TranscriptBand";
 import { usePreludeSession } from "./store";
 import { Claim } from "./types";
 
+function isTypingTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  return target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable;
+}
+
 export default function App() {
-  const { state, send, startNewUtterance, loadHealth } = usePreludeSession();
+  const { state, send, startNewUtterance, loadHealth, ensureSession, expireSession } = usePreludeSession();
   const [draftText, setDraftText] = useState("");
   const [micActive, setMicActive] = useState(false);
   const [openCitation, setOpenCitation] = useState<Claim | null>(null);
+  const [showGraph, setShowGraph] = useState(true);
   const [tourJustFinished, setTourJustFinished] = useState(false);
 
   const tour = useGuidedTour(send, startNewUtterance, () => {
@@ -32,6 +39,23 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Keyboard: M toggles mic, T starts the tour, Esc closes drawers (each
+  // drawer handles its own Esc). Ignored while typing in a field.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.metaKey || e.ctrlKey || e.altKey || isTypingTarget(e.target)) return;
+      if (e.key === "m" || e.key === "M") setMicActive((v) => !v);
+      if ((e.key === "t" || e.key === "T") && !tour.running) tour.start();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [tour]);
+
+  const onExpired = useCallback(() => {
+    setOpenCitation(null);
+    expireSession();
+  }, [expireSession]);
+
   const version = state.claims.reduce((max, c) => Math.max(max, c.version), 1);
   const diff = state.lastTurn?.diff;
 
@@ -41,7 +65,17 @@ export default function App() {
       costSummary = "re-rendered from stored claims, 0 retrievals";
     } else if (diff.added.length > 0) {
       const n = diff.added.length;
-      costSummary = `1 targeted query, ${n} claim${n === 1 ? "" : "s"} added`;
+      const cached = state.telemetry.filter(
+        (e) => e.trace_id === state.lastTurn?.trace_id && e.event === "retrieval_completed" && e.cache_hit
+      ).length;
+      const searched = state.telemetry.filter(
+        (e) => e.trace_id === state.lastTurn?.trace_id && e.event === "retrieval_completed" && !e.cache_hit
+      ).length;
+      const queries =
+        searched + cached === 0
+          ? ""
+          : `${searched} targeted quer${searched === 1 ? "y" : "ies"}${cached ? `, ${cached} from cache` : ""}, `;
+      costSummary = `${queries}${n} claim${n === 1 ? "" : "s"} added`;
     }
   }
 
@@ -49,14 +83,33 @@ export default function App() {
     <div className="app-shell" data-tour-active={tour.running ? tour.step.target : undefined}>
       <Header
         health={state.health}
+        connection={state.connection}
+        sessionId={state.sessionId}
+        sessionStartedAt={state.sessionStartedAt}
+        sessionTtlSeconds={state.sessionTtlSeconds}
         cost={state.cost}
         onTour={tour.start}
         onMic={() => setMicActive((v) => !v)}
         micActive={micActive}
+        onExpired={onExpired}
       />
 
+      {state.expired && (
+        <div className="expired-banner" role="status">
+          Session expired; nothing was kept.
+          <button className="btn-quiet" onClick={() => ensureSession()}>
+            New session
+          </button>
+        </div>
+      )}
+
       <div data-tour-target="ruler">
-        <TranscriptBand utterance={state.current} draftText={draftText} />
+        <TranscriptBand
+          utterance={state.current}
+          utterances={state.utterances}
+          draftText={draftText}
+          events={state.telemetry}
+        />
       </div>
 
       <MicInput
@@ -65,7 +118,11 @@ export default function App() {
         active={micActive}
         setActive={setMicActive}
       />
-      {state.error && <div className="error-banner">{state.error}</div>}
+      {state.error && (
+        <div className="error-banner" role="alert">
+          {state.error}. Check that the gateway is up (make up) and try again.
+        </div>
+      )}
 
       <div className="main-grid">
         <div className="answer-column" data-tour-target="diff">
@@ -80,7 +137,7 @@ export default function App() {
 
         <div className="engine-column">
           <div data-tour-target="lamp">
-            <ControllerLamp turn={state.lastTurn} />
+            <ControllerLamp turn={state.lastTurn} events={state.telemetry} />
           </div>
           <div className="engine-section" data-tour-target="fanout">
             <div className="engine-section-title">
@@ -96,11 +153,24 @@ export default function App() {
           <div className="engine-section">
             <LatencyWaterfall events={state.telemetry} traceId={state.lastTurn?.trace_id ?? null} />
           </div>
+          <div className="engine-section">
+            <button className="engine-section-toggle" onClick={() => setShowGraph((v) => !v)} aria-expanded={showGraph}>
+              Evidence graph {showGraph ? "▾" : "▸"}
+            </button>
+            {showGraph && <EvidenceGraph claims={state.claims} evidence={state.evidence} diff={diff} />}
+          </div>
           <TelemetryPane events={state.telemetry} cost={state.cost} />
         </div>
       </div>
 
-      {openCitation && <EvidenceDrawer claim={openCitation} onClose={() => setOpenCitation(null)} />}
+      {openCitation && (
+        <EvidenceDrawer
+          claim={openCitation}
+          hit={openCitation.citation_id ? state.evidence[openCitation.citation_id] : undefined}
+          superseded={diff?.superseded.includes(openCitation.claim_id) ?? false}
+          onClose={() => setOpenCitation(null)}
+        />
+      )}
 
       {tour.running && (
         <TourOverlay
