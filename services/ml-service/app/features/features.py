@@ -1,8 +1,9 @@
 """Per-chunk feature extraction feeding the controller — ADR-0003.
 
-Entities via spaCy (loaded lazily); drift and clause-boundary/content-token
-features are pure text/vector math so they stay unit-testable without spaCy
-installed.
+Entities via spaCy when it is installed (loaded lazily), falling back to a
+stopword-filtered content-word heuristic otherwise; drift and
+clause-boundary/content-token features are pure text/vector math. Everything
+here stays unit-testable without spaCy installed.
 """
 from __future__ import annotations
 
@@ -52,18 +53,29 @@ def is_presentation_turn(text: str) -> bool:
 
 
 _NLP = None
+_NLP_UNAVAILABLE = object()
 
 
 def _get_nlp():
+    """Return a spaCy pipeline, or None when spaCy is not installed.
+
+    spaCy is only pulled in by the transformer image (see Dockerfile); the
+    ML_BACKEND=hash default and the unit tests run without it, so a missing
+    import must degrade to the heuristic fallback in extract_entities rather
+    than crash the /features endpoint.
+    """
     global _NLP
     if _NLP is None:
-        import spacy
-
         try:
-            _NLP = spacy.load("en_core_web_sm")
-        except OSError:
-            _NLP = spacy.blank("en")
-    return _NLP
+            import spacy
+        except ImportError:
+            _NLP = _NLP_UNAVAILABLE
+        else:
+            try:
+                _NLP = spacy.load("en_core_web_sm")
+            except OSError:
+                _NLP = spacy.blank("en")
+    return None if _NLP is _NLP_UNAVAILABLE else _NLP
 
 
 _ANCHOR_STOPWORDS = {
@@ -77,13 +89,13 @@ _ANCHOR_STOPWORDS = {
 
 def extract_entities(text: str) -> tuple[str, ...]:
     nlp = _get_nlp()
-    doc = nlp(text)
-    ents = getattr(doc, "ents", ())
+    ents = getattr(nlp(text), "ents", ()) if nlp is not None else ()
     if ents:
         return tuple(ent.text for ent in ents)
 
     # spacy.blank has no NER pipe (the ML_BACKEND=hash default, and any
-    # environment without en_core_web_sm downloaded). Real support
+    # environment without en_core_web_sm downloaded), and spaCy itself may
+    # not be installed at all (unit tests, CI). Real support
     # transcripts are mostly lowercase common nouns ("my phone won't power
     # on") rather than proper nouns, so a capitalized-token-only fallback
     # would find no anchor for the large majority of real utterances and
