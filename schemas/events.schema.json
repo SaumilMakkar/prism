@@ -1,0 +1,48 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://prelude.local/schemas/events.schema.json",
+  "title": "Prelude telemetry event",
+  "type": "object",
+  "required": ["event", "trace_id", "ts"],
+  "properties": {
+    "event": {
+      "type": "string",
+      "enum": [
+        "controller_decision",
+        "feature_extracted",
+        "retrieval_completed",
+        "decompose_completed",
+        "synthesis_completed",
+        "claim_verified",
+        "claim_graph_updated",
+        "cost_metered",
+        "hashchain_link"
+      ]
+    },
+    "trace_id": { "type": "string" },
+    "session_id_hash": { "type": ["string", "null"] },
+    "ts": { "type": "string", "format": "date-time" },
+    "decision": { "type": "string", "enum": ["wait", "retrieve", "no_retrieval"] },
+    "reason_code": { "type": "string" },
+    "chunk_index": { "type": "integer" },
+    "doc_ids": { "type": "array", "items": { "type": "string" } },
+    "hybrid_flag": { "type": "boolean" },
+    "latency_ms": { "type": "number" },
+    "sub_queries": { "type": "array", "items": { "type": "string" } },
+    "source": { "type": "string", "enum": ["live", "record", "offline", "replay"] },
+    "claim_id": { "type": "string" },
+    "status": { "type": "string", "enum": ["verified", "uncertainty"] },
+    "added": { "type": "array", "items": { "type": "string" } },
+    "superseded": { "type": "array", "items": { "type": "string" } },
+    "unchanged": { "type": "array", "items": { "type": "string" } },
+    "tokens": { "type": "integer" },
+    "usd_estimate": { "type": "number" },
+    "cumulative_session_usd": { "type": "number" },
+    "event_id": { "type": "string" },
+    "prev_hash": { "type": "string" },
+    "hash": { "type": "string" },
+    "sub_query": { "type": "string" },
+    "citation_id": { "type": ["string", "null"] }
+  },
+  "additionalProperties": true
+}

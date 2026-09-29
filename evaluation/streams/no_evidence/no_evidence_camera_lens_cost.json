@@ -1,0 +1,9 @@
+{
+  "chunks": [
+    "How much does it cost to replace",
+    "the camera lens glass specifically?"
+  ],
+  "expected_safe_chunk_index": 1,
+  "expected_uncertain": true,
+  "expected_relevant_doc_ids": []
+}

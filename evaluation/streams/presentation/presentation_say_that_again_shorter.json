@@ -1,0 +1,8 @@
+{
+  "chunks": [
+    "My phone won't power on even after charging it for 20 minutes.",
+    "Can you say that again, shorter?"
+  ],
+  "expected_safe_chunk_index": 0,
+  "expected_relevant_doc_ids": ["KB_012 §2.1"]
+}

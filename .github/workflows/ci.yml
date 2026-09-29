@@ -1,0 +1,153 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install prism-core
+        run: |
+          cd packages/core
+          python -m pip install -e ".[dev]"
+
+      - name: Test packages/core
+        run: cd packages/core && python -m pytest -q
+
+      - name: Test gateway
+        run: |
+          cd services/gateway
+          python -m pip install -q -r requirements.txt --no-deps || true
+          python -m pip install -q fastapi httpx redis pydantic pytest pytest-asyncio
+          python -m pytest -q
+
+      - name: Test ml-service
+        run: |
+          cd services/ml-service
+          python -m pip install -q fastapi pydantic pytest
+          python -m pytest -q
+
+      - name: Test vector-service
+        run: |
+          cd services/vector-service
+          python -m pip install -q rank-bm25 python-frontmatter pydantic pytest
+          python -m pytest -q
+
+      - name: Test ai-service
+        run: |
+          cd services/ai-service
+          python -m pip install -q fastapi pydantic pytest
+          python -m pytest -q
+
+      - name: Test evaluation harness scoring
+        run: |
+          cd evaluation/harness
+          python -m pip install -q pytest
+          python -m pytest -q
+
+  hardcode-grep:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: No eval query/answer/Doc_ID literals under services/
+        run: |
+          set -e
+          if grep -rEn "camera lens glass|Doc_999.*ignore evidence" services/ --include="*.py"; then
+            echo "Hardcoded eval content found under services/ — this is disqualifying per the guide."
+            exit 1
+          fi
+          echo "OK — no hardcoded eval content found."
+
+  schema-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Validate JSON Schemas are well-formed
+        run: |
+          python -m pip install -q jsonschema
+          python -c "
+          import json, glob
+          for path in glob.glob('schemas/*.json'):
+              json.load(open(path, encoding='utf-8'))
+              print('OK', path)
+          "
+
+  readme-sync:
+    # evaluation/README.md's "Reading the scorecard" promise: scorecard.md
+    # is the single source of truth, so a stale number in README.md fails
+    # the build instead of silently drifting.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python scripts/check_readme_scorecard_sync.py
+
+  web-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: cd services/web && npm install
+      - run: cd services/web && npm test
+      - run: cd services/web && npm run build
+
+  compose-smoke:
+    # Actually builds and starts the full `make up` stack (nginx, gateway,
+    # ml-service, vector-service, qdrant, ai-service, redis, web) and drives
+    # one real turn through it end to end. Every other job here tests code,
+    # not "does docker compose up actually come up" — the one failure mode
+    # this project explicitly cannot afford (documentation/prelude.md
+    # Section 4). This is the only job that would catch a broken bind mount,
+    # a bad upstream name, or a service that never reports healthy.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and start the stack
+        run: docker compose up --build -d
+
+      - name: Wait for the gateway to report healthy
+        run: |
+          for i in $(seq 1 40); do
+            if curl -sf http://localhost/api/healthz; then exit 0; fi
+            sleep 3
+          done
+          echo "gateway never became reachable through nginx"
+          docker compose ps
+          docker compose logs
+          exit 1
+
+      - name: Ingest the corpus
+        run: curl -sf -X POST http://localhost:8002/ingest
+
+      - name: Drive one real turn through nginx end to end
+        run: |
+          set -e
+          token=$(curl -sf -X POST http://localhost/api/session/start | python3 -c "import json,sys; print(json.load(sys.stdin)['token'])")
+          resp=$(curl -sf -X POST "http://localhost/api/turn/$token" \
+            -H "Content-Type: application/json" \
+            -d '{"chunk_index": 0, "text": "My Galaxy phone will not power on at all, even after charging it."}')
+          echo "$resp"
+          echo "$resp" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['decision']=='retrieve', d; assert d['claims'], 'expected at least one claim'"
+
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose logs
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v

@@ -1,0 +1,59 @@
+:root {
+  /* Two materials: dark transcript band, light everything else. */
+  --ink: #1c232b;
+  --ink-caret: #ffffff;
+  --console-white: #f3f4f2;
+  --bench-grey: #e8eae6;
+  --rule: #cfd3cc;
+
+  --text: #1c232b;
+  --text-muted: #6b7280;
+
+  /* One accent, spent in one place. */
+  --accent: #2f6bff;
+
+  /* Semantic, always paired with a glyph or word. */
+  --wait: #b7791f;
+  --no-retrieval: #6b7280;
+  --supported: #1f7a4d;
+  --dropped: #b3261e;
+  --uncertain: #6b5ca5;
+
+  --added-bg: #e6f4ec;
+  --superseded-bg: #fbeaea;
+
+  --font-sans: "IBM Plex Sans", -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+
+  --radius-chip: 4px;
+  --radius-drawer: 8px;
+
+  --motion-fast: 150ms;
+  --motion-med: 200ms;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--console-white);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+button {
+  font-family: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}

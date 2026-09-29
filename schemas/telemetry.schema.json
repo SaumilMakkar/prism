@@ -1,0 +1,7 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://prelude.local/schemas/telemetry.schema.json",
+  "title": "Prelude telemetry stream (JSONL, one events.schema.json record per line)",
+  "type": "array",
+  "items": { "$ref": "events.schema.json" }
+}

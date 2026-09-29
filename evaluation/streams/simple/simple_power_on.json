@@ -1,0 +1,9 @@
+{
+  "chunks": [
+    "My phone",
+    "won't power on",
+    "at all, I've tried charging it."
+  ],
+  "expected_safe_chunk_index": 1,
+  "expected_relevant_doc_ids": ["KB_012 §2.1"]
+}

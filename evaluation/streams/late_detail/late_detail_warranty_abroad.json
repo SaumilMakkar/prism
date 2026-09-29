@@ -1,0 +1,8 @@
+{
+  "chunks": [
+    "Is my phone still under warranty?",
+    "Oh, and I bought it abroad, does that change anything?"
+  ],
+  "expected_safe_chunk_index": 0,
+  "expected_relevant_doc_ids": ["POL_004 §4.1", "POL_004 §4.2"]
+}

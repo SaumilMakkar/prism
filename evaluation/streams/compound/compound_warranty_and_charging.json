@@ -1,0 +1,9 @@
+{
+  "chunks": [
+    "I bought this phone abroad and it charges really slowly,",
+    "is it still under warranty and how do I fix the charging?"
+  ],
+  "expected_safe_chunk_index": 0,
+  "expected_min_subintents": 2,
+  "expected_relevant_doc_ids": ["POL_004 §4.2", "KB_012 §3.1"]
+}
