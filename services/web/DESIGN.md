@@ -126,9 +126,10 @@ stub it in the web." Everything below was added to the backend, backed by real d
 Added at the team's request after reviewing a reference landing page. Every colour is a
 token in `src/tokens.css`; a theme only redefines those variables via `data-theme` on
 `<html>`, chosen from the header's Appearance menu (`src/components/ThemeMenu.tsx`) and
-remembered per viewer in localStorage. Six appearances ship: **Mission Control**
+remembered per viewer in localStorage. Seven appearances ship: **Mission Control**
 (default), VS Code Dark, GitHub Dark, **Light** (the brief's original two-material
-design, unchanged), Blueprint, Catppuccin.
+design, unchanged), **Paper** (warm paper, ink, one gold accent — the front page's palette,
+below), Blueprint, Catppuccin.
 
 The edge treatment is one rule applied to every card (`.engine-section`, `.lamp-block`,
 `.telemetry-pane`, `.drawer`, the appearance popover): a flat surface, a 1px border, and
@@ -156,3 +157,49 @@ verifier-trail decoding (`src/types.test.ts`), the headroom label
 "never retrieved" state (`src/components/EvidenceDrawer.test.tsx`), and the Web Speech
 fallback path (`src/components/MicInput.test.tsx`). All fixtures are synthetic literals in
 the test files — nothing from `evaluation/` or `corpus/` appears under `services/web/src`.
+
+## The front page (`/`)
+
+Added after the team reviewed a second reference landing page and asked for the same feel
+in light mode. The bundle now serves two pages: the front page at `/` (`src/landing/`)
+and the dashboard at `/console` (`src/App.tsx`), chosen by one pathname check in
+`src/route.ts` — no router library, and the Vite dev server (which nginx proxies) already falls
+back to `index.html` for any path.
+
+**What it is.** A single scrolling page in the reference's structure — announcement strip,
+sticky nav, split hero (headline left, mission / problem / apparatus right), a stats band,
+four stacked "pillar" cards with a numbered stepper, a marquee of controller and verifier
+vocabulary, the apparatus diagram, a tabbed engineering panel, a closing "proven headroom"
+mark and a footer. The copy in `src/landing/content.ts` only says things the repo backs:
+the four numbers are the README scorecard (6/6 gates, measured offline), the controller's
+no-LLM guarantee, the service count and the `make up` target. No eval-stream text and no
+adversarial document id appear (the hardcode grep covers `src/landing/` like everything
+else under `services/`).
+
+**Light first, dark as a flip.** The page is light ("paper": warm paper, ink, a single
+gold accent, an italic serif for display lines) by default, with an "obsidian" flip in the
+nav kept per viewer in localStorage. Both are token sets on `.landing[data-mode]` in
+`src/landing/landing.css`; nothing in it leaks into the dashboard, and the dashboard's new
+**Paper** appearance uses the same palette so the two pages feel like one product.
+
+**The visuals are drawn, not generated.** No AI image or video generation was available
+in the session that built this, so the page carries no raster media. The hero "film"
+(`src/landing/HeroVisual.tsx`) is a looping SVG of one console turn — chunks arriving on a
+millisecond ruler, the hollow safe marker and the filled fired marker, claims forming with
+citations, a late detail superseding one claim and adding another — timed entirely by CSS
+keyframes so `prefers-reduced-motion` freezes it on the final frame. It is labelled as an
+illustration on the page; the console runs the real thing. The apparatus diagram
+(`src/landing/Apparatus.tsx`) is the same idea for the architecture: inputs converge on
+the gateway, one turn runs decompose → retrieve → synthesize → verify, the answer ships
+only after the verifier passes, and the measured outcome is the headroom the ruler shows.
+The transcript and claims in the film are synthetic; the document ids are public corpus
+fixtures. If the team records the demo video (`documentation/VIDEO_SCRIPT.md`), the hero
+figure is where it belongs.
+
+**Type.** The display serif is Instrument Serif (regular + italic), self-hosted via
+`@fontsource/instrument-serif` like the Plex faces — still no runtime CDN. It is used for
+headlines and pull lines only; body copy stays in IBM Plex Sans, labels in Plex Mono.
+
+**Tests.** `src/landing/Landing.test.tsx` covers the headline and console links, the
+paper/obsidian flip and its storage guard, every pillar rendering, and the engineering
+tabs switching their panel; `src/route.test.ts` covers the path split.

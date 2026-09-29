@@ -40,7 +40,7 @@ cp .env.example .env
 make up
 ```
 
-Brings up nginx, gateway, ml-service, vector-service, qdrant, ai-service, redis, and the web dashboard, then ingests the demo corpus. Target: ≤ 90 s on a clean machine. Dashboard: http://localhost.
+Brings up nginx, gateway, ml-service, vector-service, qdrant, ai-service, redis, and the web dashboard, then ingests the demo corpus. Target: ≤ 90 s on a clean machine. Front page: http://localhost — dashboard: http://localhost/console.
 
 ## Demo Video
 

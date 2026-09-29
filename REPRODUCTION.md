@@ -28,7 +28,7 @@ curl http://localhost/api/healthz
 
 ## 3. Open the dashboard
 
-http://localhost — send transcript chunks one at a time to see the controller lamp, reason codes, and the claim graph render live.
+http://localhost/console — send transcript chunks one at a time to see the controller lamp, reason codes, and the claim graph render live.
 
 ## 4. Run the evaluation suite
 
