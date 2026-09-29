@@ -65,7 +65,7 @@ A customer says "My Galaxy phone won't turn on, I bought it—" The controller h
 
 - No incremental re-ingestion in v1 — corpus updates require a full re-index; acceptable because ingestion is one-time and batched for the hackathon window, called out explicitly rather than hidden.
 - No authentication/authorization beyond session-token verification — appropriate for a single-tenant demo deployment behind one nginx edge, not production multi-tenancy.
-- The logistic-regression controller ablation is not tuned as extensively as the rule policy — it exists to produce a comparison number, not to be a production-ready alternative.
+- The logistic-regression controller (ADR-0003's v2) is designed but not built; only the rule policy ships, so ablation 2 has no comparison number. Ablation 1 (dense-only retrieval) runs via `make eval-ablation`.
 - On-device retrieval (Section "What's next") is sized and argued, not built.
 
 ## 9. Comparison to related work
