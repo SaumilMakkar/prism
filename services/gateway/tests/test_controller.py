@@ -46,3 +46,22 @@ def test_sessions_are_isolated():
     with patch.object(SessionControllers, "fetch_features", _fake_features(("Mumbai",))):
         controllers.decide("session-A", 0, "text", trace_id="t1")
     assert controllers.entities_for("session-B") == []
+
+
+def test_features_for_is_none_before_any_decision():
+    controllers = SessionControllers(ml_service_url="unused")
+    assert controllers.features_for("session-1") is None
+
+
+def test_features_for_reports_what_the_policy_evaluated():
+    controllers = SessionControllers(ml_service_url="unused")
+    with patch.object(SessionControllers, "fetch_features", _fake_features(("Galaxy phone",))):
+        controllers.decide("session-1", 0, "text", trace_id="t1")
+    features = controllers.features_for("session-1")
+    assert features == {
+        "content_tokens": 6,
+        "entities": ["Galaxy phone"],
+        "clause_boundary": True,
+        "embedding_drift": 0.0,
+        "is_presentation_turn": False,
+    }

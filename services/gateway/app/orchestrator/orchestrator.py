@@ -12,6 +12,7 @@ import httpx
 from prism_core.controller import ChunkFeatures
 from prism_core.schemas import Claim, ClaimDiff, Decision, RetrievalHit
 
+from app.cache.semantic_cache import SessionSemanticCache
 from app.claims.store import ClaimGraphStore
 from app.controller.controller import SessionControllers
 from app.telemetry.telemetry import TelemetryWriter
@@ -27,6 +28,7 @@ class Orchestrator:
         vector_service_url: str,
         ai_service_url: str,
         ml_service_url: str,
+        semantic_cache: SessionSemanticCache | None = None,
     ) -> None:
         self.controllers = controllers
         self.claim_store = claim_store
@@ -34,6 +36,9 @@ class Orchestrator:
         self.vector_service_url = vector_service_url
         self.ai_service_url = ai_service_url
         self.ml_service_url = ml_service_url
+        # F9: session-scoped, cosine >= 0.9 — a sub-query this session has
+        # already searched is served from memory instead of vector-service.
+        self.semantic_cache = semantic_cache or SessionSemanticCache()
 
     def _nli(self, premise: str, hypothesis: str) -> bool:
         with httpx.Client(timeout=15.0) as client:
@@ -42,6 +47,41 @@ class Orchestrator:
             )
             resp.raise_for_status()
             return resp.json()["entailed"]
+
+    def _embed(self, text: str) -> list[float] | None:
+        """Query embedding for the semantic cache. Best-effort: if ml-service
+        cannot embed, the cache is simply bypassed for this sub-query."""
+        try:
+            with httpx.Client(timeout=10.0) as client:
+                resp = client.post(f"{self.ml_service_url}/embed", json={"texts": [text]})
+                resp.raise_for_status()
+                return resp.json()["vectors"][0]
+        except Exception:
+            return None
+
+    def _retrieve(
+        self, session_id_hash: str, sub_query: str
+    ) -> tuple[list[RetrievalHit], bool, float | None]:
+        """Hits for one sub-query: from the session cache when a near-
+        duplicate was already searched (F9), otherwise a real search that is
+        then cached. Returns (hits, cache_hit, similarity)."""
+        vector = self._embed(sub_query)
+        if vector is not None:
+            found = self.semantic_cache.lookup(session_id_hash, vector)
+            if found is not None:
+                hits = [
+                    h.model_copy(update={"sub_query": sub_query, "cache_hit": True})
+                    for h in found.entry.hits
+                ]
+                return hits, True, found.similarity
+
+        hits = [
+            h.model_copy(update={"sub_query": sub_query, "cache_hit": False})
+            for h in self._search(sub_query)
+        ]
+        if vector is not None:
+            self.semantic_cache.store(session_id_hash, sub_query, vector, hits)
+        return hits, False, None
 
     def _search(self, query: str, top_k: int = 5) -> list[RetrievalHit]:
         with httpx.Client(timeout=15.0) as client:
@@ -88,6 +128,7 @@ class Orchestrator:
             decision=decision.decision.value,
             reason_code=decision.reason_code,
             chunk_index=chunk_index,
+            features=self.controllers.features_for(session_id),
             latency_ms=round((time.perf_counter() - t0) * 1000, 1),
         )
 
@@ -113,9 +154,11 @@ class Orchestrator:
         )
 
         all_claims: list[Claim] = []
+        all_evidence: list[RetrievalHit] = []
         for sub_query in sub_queries:
             t0 = time.perf_counter()
-            evidence = self._search(sub_query)
+            evidence, cache_hit, similarity = self._retrieve(session_id_hash, sub_query)
+            all_evidence.extend(evidence)
             self.telemetry.emit(
                 "retrieval_completed",
                 trace_id,
@@ -123,6 +166,8 @@ class Orchestrator:
                 doc_ids=[h.citation_id for h in evidence],
                 hybrid_flag=True,
                 sub_query=sub_query,
+                cache_hit=cache_hit,
+                cache_similarity=round(similarity, 4) if similarity is not None else None,
                 latency_ms=round((time.perf_counter() - t0) * 1000, 1),
             )
 
@@ -165,14 +210,26 @@ class Orchestrator:
         )
 
         rendered = self.claim_store.render(session_id_hash)
-        return self._response(trace_id, decision, rendered, diff)
+        return self._response(trace_id, decision, rendered, diff, all_evidence)
 
     @staticmethod
-    def _response(trace_id: str, decision, claims: list[Claim], diff: ClaimDiff) -> dict:
+    def _response(
+        trace_id: str,
+        decision,
+        claims: list[Claim],
+        diff: ClaimDiff,
+        evidence: list[RetrievalHit] | None = None,
+    ) -> dict:
         return {
             "trace_id": trace_id,
             "decision": decision.decision.value,
             "reason_code": decision.reason_code,
             "claims": [c.model_dump(mode="json") for c in claims],
             "diff": diff.model_dump(mode="json"),
+            # This turn's retrieval set with full chunk text + provenance —
+            # what the evidence drawer shows for a citation (F12/F13).
+            "evidence": [
+                {**h.model_dump(mode="json"), "citation_id": h.citation_id}
+                for h in (evidence or [])
+            ],
         }
