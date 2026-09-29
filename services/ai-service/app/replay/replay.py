@@ -13,7 +13,11 @@ from pathlib import Path
 
 from app.providers.openai_provider import ChatProvider
 
-TRAJECTORIES_DIR = Path(os.environ.get("TRAJECTORIES_DIR", "/trajectories"))
+DEFAULT_TRAJECTORIES_DIR = "/trajectories"
+
+
+def trajectories_dir_from_env() -> Path:
+    return Path(os.environ.get("TRAJECTORIES_DIR", DEFAULT_TRAJECTORIES_DIR))
 
 
 class ReplayMissError(RuntimeError):
@@ -28,13 +32,21 @@ def request_hash(system: str, user: str, model: str) -> str:
 class ReplayingProvider:
     """Wraps a live ChatProvider; mode is one of live / record / replay."""
 
-    def __init__(self, provider: ChatProvider | None, mode: str = "replay") -> None:
+    def __init__(
+        self,
+        provider: ChatProvider | None,
+        mode: str = "replay",
+        trajectories_dir: Path | None = None,
+    ) -> None:
         self.provider = provider
         self.mode = mode
-        TRAJECTORIES_DIR.mkdir(parents=True, exist_ok=True)
+        # Resolved here, not at import, so TRAJECTORIES_DIR set by a test or
+        # a compose file is honoured; created only when a mode writes to it
+        # (replay never does, and CI runners cannot mkdir /trajectories).
+        self.trajectories_dir = trajectories_dir or trajectories_dir_from_env()
 
     def _trajectory_path(self, key: str) -> Path:
-        return TRAJECTORIES_DIR / f"{key}.json"
+        return self.trajectories_dir / f"{key}.json"
 
     def complete(self, system: str, user: str, model: str) -> tuple[str, str]:
         """Returns (response_text, source) where source is live/record/replay."""
@@ -55,6 +67,7 @@ class ReplayingProvider:
         response = self.provider.complete(system, user, model)
 
         if self.mode in ("record", "offline"):
+            self.trajectories_dir.mkdir(parents=True, exist_ok=True)
             path.write_text(
                 json.dumps(
                     {
