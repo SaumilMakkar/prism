@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { Connection } from "../store";
 import { HealthResponse } from "../types";
-import { ThemeMenu } from "./ThemeMenu";
+import { TransitionLink } from "../motion";
+import { Mark } from "./Mark";
+import { ModeToggle, ThemeMenu } from "./ThemeMenu";
 
 /** Same hash the gateway uses for telemetry (sha256, first 16 hex chars —
  * services/gateway/app/security/security.py), so the id shown here is the
@@ -88,9 +90,10 @@ export function Header({
   return (
     <header className="header">
       <div className="header-left">
-        <a className="brand" href="/" title="Back to the front page">
+        <TransitionLink className="brand" href="/" title="Back to the front page">
+          <Mark size={20} />
           Prelude
-        </a>
+        </TransitionLink>
         {hashed && (
           <span className="badge" title="Session id as hashed by the gateway; matches telemetry session_id_hash">
             session {hashed.slice(0, 8)}…
@@ -116,7 +119,11 @@ export function Header({
         <span className="cost" title="Cumulative LLM spend this session, from ai-service's cost meter">
           cost ${cost.toFixed(4)}
         </span>
+        <TransitionLink className="header-link" href="/">
+          Front page
+        </TransitionLink>
         <ThemeMenu />
+        <ModeToggle />
         <button className={`btn-quiet ${micActive ? "btn-active" : ""}`} onClick={onMic} title="Toggle mic (M)">
           {micActive ? "Mic on" : "Mic"}
         </button>
