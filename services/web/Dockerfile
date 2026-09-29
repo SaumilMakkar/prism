@@ -2,8 +2,10 @@ FROM node:20-slim
 
 WORKDIR /app
 
-COPY services/web/package.json .
-RUN npm install
+# Lockfile first so the dependency layer is cached across source edits;
+# npm ci is deterministic and faster than npm install.
+COPY services/web/package.json services/web/package-lock.json ./
+RUN npm ci --no-audit --no-fund
 
 COPY services/web .
 

@@ -1,0 +1,5 @@
+# Real models for ML_BACKEND=transformer (ADR-0002). Installed only when the
+# image is built with --build-arg ML_BACKEND=transformer; the hash default
+# needs none of this and builds in seconds.
+sentence-transformers==3.1.1
+spacy==3.7.6
