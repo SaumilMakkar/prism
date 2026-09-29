@@ -28,7 +28,9 @@ bench:
 	docker compose --profile eval run --rm eval-runner python run_eval.py --gateway-url http://nginx:80/api
 
 demo:
-	@echo "Open the dashboard at http://localhost — Guided Demo Tour (F14) not yet implemented; drive turns manually via the UI or evaluation/streams/*.json."
+	@echo "Open the dashboard at http://localhost and press 'Tour' (F14): it plays the seven committed"
+	@echo "evaluation/streams/ through real /turn calls with captions and the telemetry pane open."
+	@echo "Or drive turns manually via the mic/typing input."
 
 test:
 	cd packages/core && python -m pip install -e ".[dev]" -q && python -m pytest -q
@@ -42,5 +44,5 @@ docs:
 	@echo "PDF rendering not wired up in this environment — see documentation/*.md as the hand-written source of truth."
 
 lint:
-	@echo "CI hardcode-grep: no eval query/answer/Doc_ID literals allowed under services/"
-	! grep -rEn "camera lens glass|Doc_999.*ignore evidence" services/ --include="*.py"
+	@echo "CI hardcode-grep: no eval query/answer/adversarial-Doc_ID literals allowed under services/"
+	python scripts/check_no_eval_hardcode.py
