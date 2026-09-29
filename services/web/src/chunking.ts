@@ -24,9 +24,20 @@ export function normalizeSpokenPunctuation(text: string): string {
   return trimmed;
 }
 
-export function chunkUtterance(text: string, maxWords = 6): string[] {
-  const normalized = normalizeSpokenPunctuation(text);
+export interface ChunkOptions {
+  maxWords?: number;
+  /** A finalized speech result ends where the speaker paused — that pause
+   * is a clause boundary even though the recognizer emits no punctuation.
+   * When true, the last chunk is given a terminal "." if it has none, so the
+   * controller can see the boundary it fires on. */
+  endOfUtterance?: boolean;
+}
+
+export function chunkUtterance(text: string, options: ChunkOptions | number = {}): string[] {
+  const { maxWords = 6, endOfUtterance = false } = typeof options === "number" ? { maxWords: options } : options;
+  let normalized = normalizeSpokenPunctuation(text);
   if (!normalized) return [];
+  if (endOfUtterance && !/[.?!]$/.test(normalized)) normalized += ".";
 
   // 1. split after punctuation, keeping the mark on the preceding piece
   const pieces = normalized.split(/(?<=[.,;!?])\s+/);

@@ -12,7 +12,7 @@ import { SubQueryFanout } from "./components/SubQueryFanout";
 import { TelemetryPane } from "./components/TelemetryPane";
 import { TranscriptBand } from "./components/TranscriptBand";
 import { usePreludeSession } from "./store";
-import { Claim } from "./types";
+import { Claim, reasonSentence } from "./types";
 
 function isTypingTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
@@ -131,6 +131,9 @@ export default function App() {
             diff={diff}
             version={version}
             costSummary={costSummary}
+            waitingNote={
+              state.lastTurn?.decision === "wait" ? reasonSentence(state.lastTurn.reason_code) : null
+            }
             onOpenCitation={setOpenCitation}
           />
         </div>

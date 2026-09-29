@@ -55,12 +55,14 @@ export function AnswerPanel({
   diff,
   version,
   costSummary,
+  waitingNote,
   onOpenCitation,
 }: {
   claims: Claim[];
   diff: ClaimDiff | undefined;
   version: number;
   costSummary: string;
+  waitingNote?: string | null;
   onOpenCitation: (claim: Claim) => void;
 }) {
   const [showDiff, setShowDiff] = useState(true);
@@ -90,7 +92,16 @@ export function AnswerPanel({
       <div className="answer-cost-note">{costSummary}</div>
 
       {visibleVerified.length === 0 && uncertain.length === 0 && (
-        <div className="answer-empty">No claims yet. Start the tour or take the mic; verified claims appear here with their citations.</div>
+        <div className="answer-empty">
+          {waitingNote ? (
+            <>
+              <strong>Controller is waiting.</strong> {waitingNote} Retrieval fires once a clause ends with a
+              content anchor (a device, a policy, a symptom).
+            </>
+          ) : (
+            "No claims yet. Start the tour or take the mic; verified claims appear here with their citations."
+          )}
+        </div>
       )}
 
       {prose ? (

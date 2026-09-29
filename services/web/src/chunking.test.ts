@@ -37,4 +37,15 @@ describe("chunkUtterance", () => {
     const chunks = chunkUtterance("my tablet screen flickers every morning, and it is loud too");
     expect(chunks.every((c) => c.split(" ").length >= 2)).toBe(true);
   });
+
+  it("treats the end of a finalized speech result as a clause boundary", () => {
+    const chunks = chunkUtterance("yesterday my tablet screen went dark while charging", { endOfUtterance: true });
+    expect(chunks[chunks.length - 1].endsWith(".")).toBe(true);
+    expect(chunks.join(" ")).toBe("yesterday my tablet screen went dark while charging.");
+  });
+
+  it("does not double the punctuation when the speaker said it", () => {
+    const chunks = chunkUtterance("is it covered question mark", { endOfUtterance: true });
+    expect(chunks.join(" ")).toBe("is it covered?");
+  });
 });

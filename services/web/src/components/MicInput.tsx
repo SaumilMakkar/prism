@@ -57,8 +57,11 @@ export function MicInput({
   // the previous one so the controller never sees chunk 3 before chunk 2.
   const queueRef = useRef<Promise<unknown>>(Promise.resolve());
 
-  function postChunked(text: string) {
-    const chunks = chunkUtterance(text);
+  // Speech: the recognizer's final result marks a pause, i.e. a clause end.
+  // Typed: the person controls punctuation and may be feeding mid-sentence
+  // chunks on purpose, like the eval streams do.
+  function postChunked(text: string, endOfUtterance: boolean) {
+    const chunks = chunkUtterance(text, { endOfUtterance });
     queueRef.current = queueRef.current.then(async () => {
       for (const chunk of chunks) {
         try {
@@ -88,7 +91,7 @@ export function MicInput({
         const result = e.results[i];
         const transcript = result[0].transcript;
         if (result.isFinal) {
-          postChunked(transcript.trim());
+          postChunked(transcript.trim(), true);
           onDraft("");
         } else {
           interim += transcript;
@@ -106,7 +109,7 @@ export function MicInput({
 
   function submitTyped() {
     if (!typed.trim()) return;
-    postChunked(typed.trim());
+    postChunked(typed.trim(), false);
     setTyped("");
     onDraft("");
   }
