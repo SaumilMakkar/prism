@@ -1,4 +1,4 @@
-.PHONY: up down ingest eval eval-replay bench demo test docs lint
+.PHONY: up down ingest eval eval-ablation bench demo test docs lint
 
 up:
 	docker compose up --build -d
@@ -22,6 +22,15 @@ MODE ?= offline
 eval:
 	AI_MODE=$(MODE) docker compose up -d --no-deps ai-service
 	docker compose --profile eval run --rm eval-runner
+
+# Ablation 1 (ADR-0002): dense-only retrieval. Writes its own scorecard
+# next to the main one so the README's numbers (synced from scorecard.md)
+# are never overwritten by an ablation run. gateway is recreated with
+# HYBRID_ENABLED=false for the run and restored afterwards.
+eval-ablation:
+	HYBRID_ENABLED=false docker compose up -d --no-deps gateway
+	docker compose --profile eval run --rm eval-runner python run_eval.py 		--gateway-url http://nginx:80/api 		--output /evaluation/results/scorecard_dense_only.md 		--label "ablation: dense-only retrieval"
+	docker compose up -d --no-deps gateway
 
 bench:
 	@echo "Per-stage latency benchmark — see documentation/Architecture_Brief.md Section 6."

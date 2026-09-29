@@ -29,10 +29,10 @@ Each subfolder under `evaluation/streams/` holds one query category, as timestam
 
 7 streams across these categories as of this writing (one per category above), built by the team — no eval query, answer, or Doc_ID appears anywhere under `services/`; CI greps for this on every push ([SECURITY.md](../documentation/SECURITY.md) T8). `documentation/prelude.md`'s 40-60 figure was the original target scale; expanding coverage per category is tracked as follow-up work, not yet done.
 
-## Ablations (always run alongside the main scorecard)
+## Ablations
 
-1. **Hybrid vs. dense-only retrieval** — `vector-service` hybrid flag off ([ADR-0002](../documentation/adr/0002-hybrid-retrieval.md)).
-2. **Rule-based vs. logistic-regression controller** — same feature set, learned weights ([ADR-0003](../documentation/adr/0003-rule-based-controller.md)).
+1. **Hybrid vs. dense-only retrieval** — `make eval-ablation` recreates the gateway with `HYBRID_ENABLED=false` (dense-only ranking in `vector-service`, [ADR-0002](../documentation/adr/0002-hybrid-retrieval.md)) and writes `evaluation/results/scorecard_dense_only.md` next to the main scorecard, never over it.
+2. **Rule-based vs. logistic-regression controller** — designed ([ADR-0003](../documentation/adr/0003-rule-based-controller.md)) but the logistic-regression policy is not built; only the rule policy ships. Not run.
 
 ## Edge cases reported (minimum 3, per the winner's outline)
 

@@ -5,6 +5,7 @@ is a plain HTTP call to the service that owns that capability.
 """
 from __future__ import annotations
 
+import os
 import time
 import uuid
 
@@ -17,6 +18,11 @@ from app.claims.store import ClaimGraphStore
 from app.controller.controller import SessionControllers
 from app.telemetry.telemetry import TelemetryWriter
 from app.verifier.verifier import verify_claims
+
+
+# Ablation 1 (ADR-0002): HYBRID_ENABLED=false asks vector-service for
+# dense-only ranking. `make eval-ablation` sets it on the gateway.
+HYBRID_ENABLED = os.environ.get("HYBRID_ENABLED", "true").lower() == "true"
 
 
 class Orchestrator:
@@ -86,7 +92,8 @@ class Orchestrator:
     def _search(self, query: str, top_k: int = 5) -> list[RetrievalHit]:
         with httpx.Client(timeout=15.0) as client:
             resp = client.get(
-                f"{self.vector_service_url}/search", params={"query": query, "top_k": top_k}
+                f"{self.vector_service_url}/search",
+                params={"query": query, "top_k": top_k, "hybrid": HYBRID_ENABLED},
             )
             resp.raise_for_status()
             return [RetrievalHit.model_validate(h) for h in resp.json()["hits"]]
@@ -164,7 +171,7 @@ class Orchestrator:
                 trace_id,
                 session_id_hash,
                 doc_ids=[h.citation_id for h in evidence],
-                hybrid_flag=True,
+                hybrid_flag=HYBRID_ENABLED,
                 sub_query=sub_query,
                 cache_hit=cache_hit,
                 cache_similarity=round(similarity, 4) if similarity is not None else None,

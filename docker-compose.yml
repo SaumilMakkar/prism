@@ -77,6 +77,7 @@ services:
       SESSION_HMAC_SECRET: ${SESSION_HMAC_SECRET:-dev-secret-change-me}
       SESSION_TTL_SECONDS: ${SESSION_TTL_SECONDS:-1800}
       RAW_LOGGING: ${RAW_LOGGING:-false}
+      HYBRID_ENABLED: ${HYBRID_ENABLED:-true}
       TELEMETRY_DIR: /telemetry
     depends_on:
       redis: { condition: service_healthy }
