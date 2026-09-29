@@ -37,7 +37,7 @@ jobs:
       - name: Test vector-service
         run: |
           cd services/vector-service
-          python -m pip install -q rank-bm25 python-frontmatter pydantic pytest
+          python -m pip install -q rank-bm25 python-frontmatter qdrant-client pydantic pytest
           python -m pytest -q
 
       - name: Test ai-service
@@ -53,17 +53,34 @@ jobs:
           python -m pytest -q
 
   hardcode-grep:
+    # Every query chunk in evaluation/streams/ and the adversarial doc id
+    # is a forbidden literal under services/ (source and tests). The check
+    # is derived from the streams themselves, so adding a stream extends it.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: No eval query/answer/Doc_ID literals under services/
-        run: |
-          set -e
-          if grep -rEn "camera lens glass|Doc_999.*ignore evidence" services/ --include="*.py"; then
-            echo "Hardcoded eval content found under services/ — this is disqualifying per the guide."
-            exit 1
-          fi
-          echo "OK — no hardcoded eval content found."
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: No eval query/answer/adversarial-Doc_ID literals under services/
+        run: python scripts/check_no_eval_hardcode.py
+
+  trivy:
+    # SECURITY.md T9: pinned requirements + slim base images, scanned here.
+    # Fails only on CRITICAL findings with an available fix, so it stays a
+    # signal rather than a permanently red job.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Scan pinned dependencies and Dockerfiles
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,misconfig
+          severity: CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
 
   schema-validate:
     runs-on: ubuntu-latest

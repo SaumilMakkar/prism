@@ -81,7 +81,7 @@ def test_synthesize_rejects_chunk_with_only_incidental_word_overlap():
     user = (
         "Evidence:\n[SLA_001 §8.2]\nRepairs requiring a motherboard or speaker "
         "module replacement are completed within 7 business days, subject to parts "
-        "availability.\n\nQuestion: how much does it cost to replace the speaker grille specifically"
+        "availability.\n\nQuestion: what would replacing the speaker grille cost specifically"
     )
     raw = provider.complete(SYNTHESIZE_SYSTEM, user, "offline-model")
     data = json.loads(raw)
