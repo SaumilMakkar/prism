@@ -44,7 +44,7 @@ Brings up nginx, gateway, ml-service, vector-service, qdrant, ai-service, redis,
 
 ## Demo Video
 
-See [documentation/VIDEO_SCRIPT.md](documentation/VIDEO_SCRIPT.md) for the timed script; the rendered video link goes here once recorded.
+See [documentation/VIDEO_SCRIPT.md](documentation/VIDEO_SCRIPT.md) for the timed script; the rendered video link goes here once recorded. Until then, [services/web/public/media/console-demo.webm](services/web/public/media/console-demo.webm) is an unscripted screen recording of the console on synthetic input (also embedded on the front page at http://localhost).
 
 ## Running Evaluations
 

@@ -126,10 +126,16 @@ stub it in the web." Everything below was added to the backend, backed by real d
 Added at the team's request after reviewing a reference landing page. Every colour is a
 token in `src/tokens.css`; a theme only redefines those variables via `data-theme` on
 `<html>`, chosen from the header's Appearance menu (`src/components/ThemeMenu.tsx`) and
-remembered per viewer in localStorage. Seven appearances ship: **Mission Control**
-(default), VS Code Dark, GitHub Dark, **Light** (the brief's original two-material
-design, unchanged), **Paper** (warm paper, ink, one gold accent — the front page's palette,
-below), Blueprint, Catppuccin.
+remembered per viewer in localStorage. Eight appearances ship: **Paper** (default — warm
+paper, ink, one gold accent; the front page's palette, below), **Obsidian** (the front
+page's dark mode, same gold), **Light** (the brief's original two-material design,
+unchanged), Mission Control, VS Code Dark, GitHub Dark, Blueprint, Catppuccin. A sun/moon
+toggle next to the menu flips between Paper and Obsidian only; it writes the same
+localStorage key the front page's toggle writes, so `/` and `/console` always open in the
+mode the viewer last chose, and a one-line script in `index.html` applies the remembered
+theme before first paint so neither page flashes the other mode. In Paper and Obsidian the
+header row leaves the ink band and sits on the page colour (`--header-*` tokens), matching
+the front page's nav; the transcript band stays the one dark surface.
 
 The edge treatment is one rule applied to every card (`.engine-section`, `.lamp-block`,
 `.telemetry-pane`, `.drawer`, the appearance popover): a flat surface, a 1px border, and
@@ -139,6 +145,23 @@ glow beneath. The primary button, the caret and the fired marker carry the same 
 glow. This is a deliberate deviation from the brief's "no drop shadows except the drawer"
 line: the glow is the accent spent on the same forward-motion elements as before, and the
 Light theme keeps the original look for anyone who prefers the brief as written.
+
+## Motion (Framer Motion)
+
+Motion is centralised in `src/motion.tsx` and keeps the principle above — it only marks a
+state change that already happened in the data. What animates: the page arriving (fade
+and 10px rise) and leaving (a `TransitionLink` plays a 220ms exit before `location.assign`,
+since `/` and `/console` are separate document loads); a "Connecting to the gateway"
+screen with the mark breathing until the first `/healthz` answer, then a cross-fade out;
+claim rows rising in as they are added and fading as they are superseded (`AnimatePresence`
+around the claim list); the controller lamp's verdict, where the previous word fades out
+before the new one rises in; the evidence drawer sliding in from the right with its
+backdrop fading; the tour caption and any banner; the appearance popover. On the front
+page, the hero lines stagger in on load, sections rise into view once as they are scrolled
+to, the engineering panel cross-fades between tabs and its chips stagger, and the sun/moon
+icon rotates on flip. `MotionConfig reducedMotion="user"` turns every one of these into an
+instant cut when the OS asks for reduced motion; the four CSS motions from the brief are
+unchanged.
 
 ## Keyboard
 
@@ -195,6 +218,24 @@ only after the verifier passes, and the measured outcome is the headroom the rul
 The transcript and claims in the film are synthetic; the document ids are public corpus
 fixtures. If the team records the demo video (`documentation/VIDEO_SCRIPT.md`), the hero
 figure is where it belongs.
+
+**The console shares the signature.** After the front page landed, the dashboard took the
+same type system so `/` and `/console` read as one product: the logo mark and a "Front
+page" link in the header, badges, buttons and section labels in tracked mono (the front
+page's eyebrow style), and the display serif on exactly two hero moments — the live
+transcript line and the controller's verdict word ("Retrieve" / "Wait" / "No-Retrieval"),
+plus the "Not in the corpus" title. Body copy, claims, quotes and every number stay in
+Plex Sans / Plex Mono. This is a typographic change shared by all appearances; the rule
+that a theme only redefines colour tokens still holds (`--font-display` lives once in
+`:root`).
+
+**The recording.** `public/media/console-demo.webm` (with its poster frame) is a screen
+recording of `/console` in Paper mode, made with Playwright's video capture against the
+running stack, on four typed, synthetic support-call sentences. Nothing in it is scripted
+or staged: every controller decision, retrieval, claim and verifier verdict on screen is
+the engine's own on that input, and no eval-stream text is typed. It sits in the
+"Recording" section of the front page, muted and looping, with controls. Re-record after
+a visible UI change; the poster is the final frame of the same session.
 
 **Type.** The display serif is Instrument Serif (regular + italic), self-hosted via
 `@fontsource/instrument-serif` like the Plex faces — still no runtime CDN. It is used for
