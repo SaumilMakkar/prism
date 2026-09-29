@@ -15,6 +15,7 @@ export const THEMES: Theme[] = [
   { id: "vscode-dark", label: "VS Code Dark", swatch: ["#1e1e1e", "#3794ff"] },
   { id: "github-dark", label: "GitHub Dark", swatch: ["#0d1117", "#58a6ff"] },
   { id: "light", label: "Light", swatch: ["#f3f4f2", "#2f6bff"] },
+  { id: "paper", label: "Paper", swatch: ["#f4efe4", "#9a6f12"] },
   { id: "blueprint", label: "Blueprint", swatch: ["#0a1628", "#60a5fa"] },
   { id: "catppuccin", label: "Catppuccin", swatch: ["#1e1e2e", "#cba6f7"] },
 ];

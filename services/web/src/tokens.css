@@ -86,6 +86,43 @@
   color-scheme: light;
 }
 
+/* "Paper" — the light appearance built after the reference landing page:
+   warm paper, ink text, a single gold accent. The landing page at "/"
+   uses the same palette (src/landing/landing.css). */
+:root[data-theme="paper"] {
+  --bg: #f4efe4;
+  --surface: #fbf8f1;
+  --surface-2: #ece6d8;
+  --border: #d9d2c1;
+  --border-strong: #bfb6a1;
+  --edge: rgba(255, 255, 255, 0.95);
+  --glow: rgba(166, 124, 26, 0.22);
+
+  --ink: #17150f;
+  --ink-text: #f4efe4;
+  --ink-muted: #9a917c;
+  --ink-border: #2b2822;
+  --ink-glow: rgba(212, 160, 23, 0.16);
+
+  --text: #17150f;
+  --text-muted: #6f6a5e;
+
+  --accent: #9a6f12;
+  --accent-text: #ffffff;
+
+  --wait: #b0651b;
+  --no-retrieval: #6f6a5e;
+  --supported: #2a7a4b;
+  --dropped: #b3261e;
+  --uncertain: #6b5ca5;
+
+  --added-bg: #e4f0e6;
+  --superseded-bg: #f8e6e3;
+  --mark-bg: #f6e6b8;
+
+  color-scheme: light;
+}
+
 :root[data-theme="github-dark"] {
   --bg: #0d1117;
   --surface: #161b22;
