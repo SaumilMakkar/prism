@@ -124,7 +124,26 @@ def process_turn(token: str, req: ChunkRequest) -> dict:
     session_id = _require_session(token)
     session_id_hash = hash_session_id(session_id)
     clean_text = redact_pii(req.text)
-    return _orchestrator.process_chunk(session_id, session_id_hash, req.chunk_index, clean_text)
+    try:
+        return _orchestrator.process_chunk(session_id, session_id_hash, req.chunk_index, clean_text)
+    except httpx.HTTPStatusError as exc:
+        # A peer service refused (e.g. ai-service 502 "LLM provider error:
+        # invalid API key"). Pass its reason through so the dashboard can
+        # say what actually failed instead of a bare 500.
+        detail = _upstream_detail(exc)
+        raise HTTPException(status_code=502, detail=detail) from exc
+    except httpx.RequestError as exc:
+        raise HTTPException(status_code=503, detail=f"{exc.request.url.host} unreachable: {exc}") from exc
+
+
+def _upstream_detail(exc: httpx.HTTPStatusError) -> str:
+    host = exc.request.url.host
+    try:
+        body = exc.response.json()
+        reason = body.get("detail", body) if isinstance(body, dict) else body
+    except Exception:
+        reason = exc.response.text[:200]
+    return f"{host} returned {exc.response.status_code}: {reason}"
 
 
 @app.get("/claims/{token}")

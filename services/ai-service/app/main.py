@@ -67,6 +67,10 @@ def decompose_endpoint(req: DecomposeRequest) -> DecomposeResponse:
         )
     except ReplayMissError as exc:
         raise HTTPException(status_code=424, detail=str(exc)) from exc
+    except HTTPException:
+        raise
+    except Exception as exc:  # provider failure (bad key, unknown model, network)
+        raise HTTPException(status_code=502, detail=f"LLM provider error: {exc}") from exc
     _meter(req.session_id, req.text, sub_queries)
     return DecomposeResponse(sub_queries=sub_queries, source=source)
 
@@ -77,6 +81,10 @@ def synthesize_endpoint(req: SynthesizeRequest) -> SynthesizeResponse:
         claims, source = synthesize(req.sub_query, req.evidence, _replaying, SYNTHESIZE_MODEL)
     except ReplayMissError as exc:
         raise HTTPException(status_code=424, detail=str(exc)) from exc
+    except HTTPException:
+        raise
+    except Exception as exc:  # provider failure (bad key, unknown model, network)
+        raise HTTPException(status_code=502, detail=f"LLM provider error: {exc}") from exc
     _meter(req.session_id, req.sub_query, claims)
     return SynthesizeResponse(claims=claims, source=source)
 
