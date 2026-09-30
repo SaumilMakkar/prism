@@ -1,0 +1,7 @@
+{
+  "chunks": [
+    "My smart plug shows as offline in the SmartThings app."
+  ],
+  "expected_safe_chunk_index": 0,
+  "expected_relevant_doc_ids": ["KB_030 §7.1"]
+}

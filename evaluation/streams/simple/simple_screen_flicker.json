@@ -1,0 +1,7 @@
+{
+  "chunks": [
+    "There are vertical lines flickering across my screen."
+  ],
+  "expected_safe_chunk_index": 0,
+  "expected_relevant_doc_ids": ["KB_012 §1.2"]
+}

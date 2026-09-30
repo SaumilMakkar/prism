@@ -1,0 +1,8 @@
+{
+  "chunks": [
+    "What's the trade-in value for my old phone if I upgrade?"
+  ],
+  "expected_safe_chunk_index": 0,
+  "expected_uncertain": true,
+  "expected_relevant_doc_ids": []
+}

@@ -21,7 +21,7 @@ Demo corpus: 6 sectioned markdown documents, 17 retrievable sections after inges
 
 ## 4. Query categories
 
-`simple`, `compound`, `late_detail`, `no_evidence`, `noise`, `presentation`, `adversarial` — see `evaluation/README.md` for what each tests and which gate it maps to. 7 streams, one per category. (Until 2026-09-29 the adversarial stream sat outside a category folder and was silently skipped by the harness; it is now scored.)
+`simple`, `compound`, `late_detail`, `no_evidence`, `noise`, `presentation`, `adversarial` — see `evaluation/README.md` for what each tests and which gate it maps to. 22 streams as of 2026-09-30 (4 simple, 4 compound, 3 late_detail, 3 no_evidence, 3 noise, 3 presentation, 2 adversarial), up from the original 7 — every added stream was verified against a live run, not hand-guessed (see Section 8).
 
 ## 5. Metrics
 
@@ -39,7 +39,7 @@ Recall@k / NDCG@5 and RAGAS are listed in the plan but not computed by the harne
 
 ## 6. Results
 
-From `evaluation/results/scorecard.md`, generated 2026-09-29T06:00:25Z over 7 streams.
+From `evaluation/results/scorecard.md`, generated 2026-09-30T11:09:10Z over 22 streams.
 
 | Gate | Target | Internal target | Result | ✔/✘ |
 |---|---|---|---|---|
@@ -50,7 +50,7 @@ From `evaluation/results/scorecard.md`, generated 2026-09-29T06:00:25Z over 7 st
 | G5 | — | 100 | 100.0 | ✔ |
 | G6 | 100% | 100 | 100.0 | ✔ |
 
-Mean headroom (fired chunk − safe chunk): **0.14 chunks**. False-positive rate on `no_evidence`: **0.0%**. Hash-chained telemetry verified intact after the run (G1).
+Mean headroom (fired chunk − safe chunk): **0.05 chunks** over 22 streams (was 0.14 over the original 7). False-positive rate on `no_evidence`: **0.0%**. Hash-chained telemetry verified intact after the run (G1).
 
 ## 7. Ablations
 
@@ -59,9 +59,10 @@ Mean headroom (fired chunk − safe chunk): **0.14 chunks**. False-positive rate
 
 ## 8. Findings and discussion
 
-- **The controller fires at or just after the safe point, never before.** Mean headroom is 0.14 chunks across 7 streams and no stream fired early; on the mid-sentence self-correction stream the provisional retrieval is cancelled and re-anchored (`DRIFT_ABOVE_THRESHOLD_REANCHOR`) rather than answered.
+- **The controller fires at or just after the safe point, never before.** Mean headroom is 0.05 chunks across 22 streams and no stream fired early; on the mid-sentence self-correction streams the provisional retrieval is cancelled and re-anchored (`DRIFT_ABOVE_THRESHOLD_REANCHOR`) rather than answered.
 - **Verification is where the real bugs showed up, not synthesis.** Three defects were found only by running the stack end to end, all fixed with a regression test: a citation-id collision between a superseded and a current policy version that double-counted in RRF; a telemetry hash chain that broke on gateway restart; and an entity fallback that never fired on lowercase transcripts, leaving the controller stuck on `NO_STABLE_ENTITY`.
 - **The offline provider's first false positive came from the `no_evidence` stream:** a single shared word made an unrelated SLA chunk look like evidence. Overlap is now measured against the question's own content words with a minimum ratio, and the stream ends in `uncertainty`.
+- **Writing 15 more streams surfaced two more real bugs in the offline provider, not just labelling mistakes.** (1) The relevance-overlap check never saw a chunk's section heading, so a question phrased like the heading ("device restarts repeatedly") and a body that never repeats that phrasing verbatim ("boot loop") was wrongly rejected as off-topic — `_format_evidence` now includes the heading (real fix, benefits `live` mode too, not just the offline fallback). (2) The tokenizer split contractions like `"won't"` into two tokens, `"won"` and a bare `"t"`; that stray `"t"` (and `"won"`) then spuriously matched *any* other chunk whose heading also happened to contain a contraction, occasionally outranking the actually-correct chunk. Fixed by treating common negation contractions as stopwords, consistent with already filtering their expanded forms ("will", "not", "does").
 - **The adversarial chunk cannot reach `verified` even when it is legitimately retrieved:** its instruction text never quote-matches a real claim, so it is dropped with a reason code the dashboard shows in the "dropped by the verifier" section.
 - **Session semantic cache saw 0 hits of 12 retrievals** in this run — the seven streams do not repeat a sub-query. Hits appear in interactive use when a detail is re-asked; the fan-out shows them as "cached" with the similarity.
 
@@ -73,7 +74,7 @@ Mean headroom (fired chunk − safe chunk): **0.14 chunks**. False-positive rate
 
 ## 10. Limitations
 
-- 7 streams, one per category: enough to prove each mechanism, not enough for a distribution. Gate percentages are therefore 0 or 100 per stream.
+- 22 streams across 7 categories: enough to see a little variation within each category, still not enough for a real distribution — most categories still score 0 or 100 per stream rather than a meaningful percentage in between.
 - Hash backend and offline provider: retrieval quality and answer quality are not what this run measures; a `MODE=live` run with the transformer backend is required for those.
 - No Recall@k, NDCG or RAGAS in the harness.
 - The safe-point labels are hand-assigned per stream (two were corrected after the first run); an offline top-k-overlap computation of the safe point is designed but not implemented.

@@ -1,0 +1,8 @@
+{
+  "chunks": [
+    "My SmartThings device shows offline and I've already checked the wifi.",
+    "Can you summarize that in one line?"
+  ],
+  "expected_safe_chunk_index": 0,
+  "expected_relevant_doc_ids": ["KB_030 §7.1"]
+}

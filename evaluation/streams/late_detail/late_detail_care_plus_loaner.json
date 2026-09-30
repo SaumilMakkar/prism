@@ -1,0 +1,8 @@
+{
+  "chunks": [
+    "How many business days does a standard repair take at the service centre?",
+    "Oh, I also have Samsung Care+, does that get me a loaner device?"
+  ],
+  "expected_safe_chunk_index": 0,
+  "expected_relevant_doc_ids": ["SLA_001 §8.1", "SLA_001 §9.1"]
+}

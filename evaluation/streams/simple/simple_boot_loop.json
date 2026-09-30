@@ -1,0 +1,7 @@
+{
+  "chunks": [
+    "My phone powers on but keeps going into a boot loop, restarting repeatedly."
+  ],
+  "expected_safe_chunk_index": 0,
+  "expected_relevant_doc_ids": ["KB_012 §2.2"]
+}

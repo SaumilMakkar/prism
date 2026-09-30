@@ -1,0 +1,9 @@
+{
+  "chunks": [
+    "I'm having an issue with my Galaxy phone,",
+    "actually sorry, it's a SmartThings sensor,",
+    "the device keeps showing offline in the SmartThings app."
+  ],
+  "expected_safe_chunk_index": 0,
+  "expected_relevant_doc_ids": ["KB_030 §6.1", "KB_030 §6.2", "KB_030 §7.1"]
+}

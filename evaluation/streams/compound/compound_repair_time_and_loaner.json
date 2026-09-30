@@ -1,0 +1,8 @@
+{
+  "chunks": [
+    "How long will a motherboard repair take, and do I get a loaner device while I wait?"
+  ],
+  "expected_safe_chunk_index": 0,
+  "expected_min_subintents": 2,
+  "expected_relevant_doc_ids": ["SLA_001 §8.2", "SLA_001 §9.1"]
+}

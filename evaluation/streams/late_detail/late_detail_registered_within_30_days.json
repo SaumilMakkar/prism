@@ -1,0 +1,8 @@
+{
+  "chunks": [
+    "What's the warranty period on my phone?",
+    "I registered it within 30 days on the Samsung Members app, does that change anything?"
+  ],
+  "expected_safe_chunk_index": 0,
+  "expected_relevant_doc_ids": ["POL_004 §4.1"]
+}
