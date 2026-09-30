@@ -59,10 +59,20 @@ export function chunkUtterance(text: string, options: ChunkOptions | number = {}
     if (current.length > 0) chunks.push(current.join(" "));
   }
 
-  // 3. a dangling one-word tail ("dot." already merged; "you?") joins the previous chunk
+  // 3. A trailing fragment below the controller's own content-token minimum
+  // (prism_core.controller.ControllerConfig.min_content_tokens, 4) can
+  // never fire on its own no matter what it says — a hard word-count cap
+  // with no real punctuation/connective to split on (e.g. "...what should
+  // I do.") was slicing a single clause into two pieces neither of which
+  // could ever satisfy the controller: the first loses its clause-ending
+  // punctuation, the second is too short. Merge such a fragment into the
+  // previous chunk instead of stranding it — the first chunk is exempt,
+  // since a short opening chunk is the controller correctly waiting for
+  // more, not a broken split.
+  const MIN_CONTENT_WORDS = 4;
   const merged: string[] = [];
   for (const c of chunks) {
-    if (merged.length > 0 && c.split(/\s+/).length === 1) merged[merged.length - 1] += ` ${c}`;
+    if (merged.length > 0 && c.split(/\s+/).length < MIN_CONTENT_WORDS) merged[merged.length - 1] += ` ${c}`;
     else merged.push(c);
   }
   return merged;
