@@ -69,6 +69,62 @@ def test_synthesize_returns_no_claims_when_no_evidence_relates_to_question():
     assert data["claims"] == []
 
 
+def test_synthesize_does_not_confuse_unrelated_chunks_via_contraction_fragments():
+    # Real bug: "won't" used to tokenize as two words, "won" and "t" — a
+    # bare "t" (and "won") then spuriously matched ANY other chunk whose
+    # heading also happened to contain a contraction, even on a completely
+    # different topic. "My phone won't power on" was matching a
+    # screen-touch chunk ("Screen won't respond to touch") ahead of the
+    # actually-correct power-on chunk purely because both contain "won't".
+    provider = OfflineProvider()
+    user = (
+        "Evidence:\n[KB_012 §2.1]\nHeading: Device will not power on\n"
+        "If the device will not power on, connect the original charger and cable and wait 10 minutes "
+        "before attempting to power on — some units require a minimum charge threshold before the "
+        "power-on sequence will complete. If the device still will not power on after 10 minutes of "
+        "charging, hold Power and Volume Down for 15 seconds to force a hardware reset. If there is "
+        "still no response, the battery or power IC may have failed and the device should be taken to "
+        "an authorized service centre.\n\n"
+        "[KB_012 §1.1]\nHeading: Screen won't respond to touch\n"
+        "If the screen does not respond to touch, first perform a soft restart by holding the Power "
+        "and Volume Down buttons for 10 seconds. If the device does not restart, connect it to a "
+        "charger for 15 minutes and try again — a fully drained battery can appear as an "
+        "unresponsive screen.\n\n"
+        "Question: my phone won't power on, what should I do"
+    )
+    raw = provider.complete(SYNTHESIZE_SYSTEM, user, "offline-model")
+    claims = parse_synthesize_response(raw, sub_intent="power on")
+    assert len(claims) == 1
+    assert claims[0].citation_id == "KB_012 §2.1"
+
+
+def test_synthesize_uses_heading_to_find_a_match_the_body_alone_would_miss():
+    # Real bug found via evaluation/streams/simple/simple_boot_loop.json:
+    # the chunk body never says "restarts repeatedly" — that phrasing only
+    # exists in the markdown heading ("Device powers on but restarts
+    # repeatedly (boot loop)"). Without folding the heading into relevance
+    # scoring, this legitimate match was rejected as off-topic.
+    provider = OfflineProvider()
+    user = (
+        "Evidence:\n[KB_012 §2.2]\nHeading: Device powers on but restarts repeatedly (boot loop)\n"
+        "A boot loop is most commonly caused by a corrupted software update. Boot into Safe Mode by "
+        "holding Volume Down during the Samsung logo screen.\n\n"
+        "Question: my phone powers on but restarts repeatedly in a boot loop"
+    )
+    raw = provider.complete(SYNTHESIZE_SYSTEM, user, "offline-model")
+    claims = parse_synthesize_response(raw, sub_intent="boot loop")
+    assert len(claims) == 1
+    assert claims[0].citation_id == "KB_012 §2.2"
+    # The quote must stay a real substring of the BODY — never the heading,
+    # since the heading text was never sent to vector-service as chunk text
+    # and would fail the verifier's quote-match check.
+    assert "Heading:" not in claims[0].quote
+    assert claims[0].quote in (
+        "A boot loop is most commonly caused by a corrupted software update. Boot into Safe Mode by "
+        "holding Volume Down during the Samsung logo screen."
+    )
+
+
 def test_synthesize_rejects_chunk_with_only_incidental_word_overlap():
     # A chunk about repair-SLA turnaround time that happens to mention
     # "speaker" must not be treated as answering a question about the cost

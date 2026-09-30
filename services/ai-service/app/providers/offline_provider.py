@@ -23,11 +23,19 @@ import re
 
 _SPLIT_RE = re.compile(r",?\s+and\s+|;\s*|\?\s*")
 _SENTENCE_RE = re.compile(r"(?<=[.!?])\s+")
-_WORD_RE = re.compile(r"[A-Za-z0-9]+")
+_WORD_RE = re.compile(r"[A-Za-z0-9]+(?:'[A-Za-z0-9]+)*")
 _STOPWORDS = {
     "the", "a", "an", "is", "it", "to", "in", "on", "of", "for", "and", "or",
     "with", "at", "my", "i", "you", "your", "this", "that", "does", "do",
     "how", "what", "when", "where", "why", "will", "not", "be", "am", "are",
+    # Contracted forms of the negations/auxiliaries above — filtered
+    # already-expanded, so a chunk phrased "will not" and a question phrased
+    # "won't" tokenize the same way instead of missing each other, and a
+    # generic negation contraction never drives a false relevance match
+    # against an unrelated chunk that happens to share it.
+    "won't", "don't", "doesn't", "isn't", "wasn't", "aren't", "weren't",
+    "can't", "couldn't", "wouldn't", "shouldn't", "didn't", "haven't",
+    "hasn't", "hadn't",
 }
 
 
@@ -67,13 +75,25 @@ class OfflineProvider:
         # user_text is "Evidence:\n[ID]\ntext\n\n[ID2]\ntext2\n\nQuestion: ..."
         evidence_block, _, question = user_text.partition("Question:")
         evidence_block = evidence_block.split("Evidence:", 1)[-1]
-        chunks: list[tuple[str, str]] = []
+        # (citation_id, heading, body) — heading (marked "Heading: " by
+        # synthesize.py's _format_evidence) folds into relevance scoring
+        # below, but quote extraction only ever reads `body`, since a quote
+        # must stay a real substring of the chunk's actual text, not its
+        # heading.
+        chunks: list[tuple[str, str, str]] = []
         for block in evidence_block.split("\n\n"):
             block = block.strip()
             if not block.startswith("["):
                 continue
-            citation_id, _, text = block.partition("]")
-            chunks.append((citation_id.lstrip("["), text.strip()))
+            citation_id, _, rest = block.partition("]")
+            rest = rest.strip()
+            heading = ""
+            body = rest
+            if rest.startswith("Heading: "):
+                heading_line, _, body = rest.partition("\n")
+                heading = heading_line[len("Heading: "):].strip()
+                body = body.strip()
+            chunks.append((citation_id.lstrip("["), heading, body))
 
         if not chunks:
             return json.dumps({"claims": []})
@@ -83,10 +103,10 @@ class OfflineProvider:
             return json.dumps({"claims": []})
 
         best_id, best_text, best_overlap = None, None, -1
-        for citation_id, text in chunks:
-            overlap = len(_tokenize(text) & question_tokens)
+        for citation_id, heading, body in chunks:
+            overlap = len(_tokenize(f"{heading} {body}") & question_tokens)
             if overlap > best_overlap:
-                best_id, best_text, best_overlap = citation_id, text, overlap
+                best_id, best_text, best_overlap = citation_id, body, overlap
 
         # Overlap is measured as a fraction of the QUESTION's own content
         # words, not the (usually much longer) chunk's — a chunk that only
