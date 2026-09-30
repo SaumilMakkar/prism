@@ -28,6 +28,10 @@ HYBRID_ENABLED = os.environ.get("HYBRID_ENABLED", "true").lower() == "true"
 AI_TIMEOUT_SECONDS = float(os.environ.get("AI_TIMEOUT_SECONDS", "60"))
 
 
+def _norm(text: str | None) -> str:
+    return " ".join((text or "").lower().split()).rstrip("?.! ")
+
+
 class Orchestrator:
     def __init__(
         self,
@@ -165,6 +169,14 @@ class Orchestrator:
 
         all_claims: list[Claim] = []
         all_evidence: list[RetrievalHit] = []
+        # Sub-intents already recorded as "not in the corpus" this session:
+        # a re-asked unanswerable question must not add a second identical
+        # row (each placeholder used to get a fresh uuid, so it did).
+        unanswered = {
+            _norm(c.sub_intent)
+            for c in self.claim_store.render(session_id_hash)
+            if c.reason_code == "NO_EVIDENCE_FOR_SUBQUERY" and c.sub_intent
+        }
         for sub_query in sub_queries:
             t0 = time.perf_counter()
             evidence, cache_hit, similarity = self._retrieve(session_id_hash, sub_query)
@@ -185,7 +197,8 @@ class Orchestrator:
             proposed_claims, synth_source = self._synthesize(session_id, sub_query, evidence)
 
             no_evidence_claim = None
-            if not proposed_claims:
+            if not proposed_claims and _norm(sub_query) not in unanswered:
+                unanswered.add(_norm(sub_query))
                 # Synthesis found nothing for THIS sub-question. Leaving the
                 # claim graph untouched here would silently keep showing
                 # whatever unrelated claim was already in the session from
