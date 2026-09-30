@@ -23,6 +23,9 @@ from app.verifier.verifier import verify_claims
 # Ablation 1 (ADR-0002): HYBRID_ENABLED=false asks vector-service for
 # dense-only ranking. `make eval-ablation` sets it on the gateway.
 HYBRID_ENABLED = os.environ.get("HYBRID_ENABLED", "true").lower() == "true"
+# LLM calls (decompose/synthesize) can take several seconds on a reasoning
+# model; 15 s was enough for the offline provider only.
+AI_TIMEOUT_SECONDS = float(os.environ.get("AI_TIMEOUT_SECONDS", "60"))
 
 
 class Orchestrator:
@@ -100,7 +103,7 @@ class Orchestrator:
 
     def _decompose(self, session_id: str, text: str) -> tuple[list[str], str]:
         entities = self.controllers.entities_for(session_id)
-        with httpx.Client(timeout=15.0) as client:
+        with httpx.Client(timeout=AI_TIMEOUT_SECONDS) as client:
             resp = client.post(
                 f"{self.ai_service_url}/decompose",
                 json={"session_id": session_id, "text": text, "session_entities": entities},
@@ -110,7 +113,7 @@ class Orchestrator:
             return data["sub_queries"], data["source"]
 
     def _synthesize(self, session_id: str, sub_query: str, evidence: list[RetrievalHit]) -> tuple[list[Claim], str]:
-        with httpx.Client(timeout=15.0) as client:
+        with httpx.Client(timeout=AI_TIMEOUT_SECONDS) as client:
             resp = client.post(
                 f"{self.ai_service_url}/synthesize",
                 json={
