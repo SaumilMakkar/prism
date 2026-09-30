@@ -72,6 +72,14 @@ export function AnswerPanel({
 
   const verified = claims.filter((c) => c.status === "verified");
   const uncertain = claims.filter((c) => c.status === "uncertainty");
+  // Two different failure modes, not one: a claim the verifier actually
+  // rejected (it was proposed with a citation/quote that didn't hold up)
+  // vs. a sub-question synthesis never found evidence for at all. Calling
+  // the second one "dropped by the verifier" would be inaccurate — it
+  // never reached the verifier — and the two need separate framing so an
+  // old unrelated claim never reads as an answer to a new question.
+  const noEvidence = uncertain.filter((c) => c.reason_code === "NO_EVIDENCE_FOR_SUBQUERY");
+  const droppedByVerifier = uncertain.filter((c) => c.reason_code !== "NO_EVIDENCE_FOR_SUBQUERY");
 
   const visibleVerified = showDiff
     ? verified
@@ -124,28 +132,27 @@ export function AnswerPanel({
         </div>
       )}
 
-      {uncertain.length > 0 && (
+      {noEvidence.length > 0 && (
         <motion.div className="uncertainty-block" {...appear}>
           <div className="uncertainty-title">Not in the corpus</div>
-          {uncertain
-            .filter((c) => c.reason_code === "ID_NOT_IN_RETRIEVAL_SET" || c.reason_code === null)
-            .map((c) => (
-              <div key={c.claim_id} className="uncertainty-row">
-                {c.sub_intent ?? c.text}
-                <div className="uncertainty-ask">&rarr; asks: "Could you clarify or provide more detail?"</div>
-              </div>
-            ))}
+          {noEvidence.map((c) => (
+            <div key={c.claim_id} className="uncertainty-row">
+              {c.sub_intent ?? c.text}
+              <div className="uncertainty-ask">&rarr; asks: "Could you clarify or provide more detail?"</div>
+            </div>
+          ))}
         </motion.div>
       )}
 
-      {uncertain.length > 0 && (
+      {droppedByVerifier.length > 0 && (
         <div className="dropped-section">
           <button className="dropped-toggle" onClick={() => setShowDropped((v) => !v)}>
-            {uncertain.length} claim{uncertain.length === 1 ? "" : "s"} dropped by the verifier {showDropped ? "▾" : "▸"}
+            {droppedByVerifier.length} claim{droppedByVerifier.length === 1 ? "" : "s"} dropped by the verifier{" "}
+            {showDropped ? "▾" : "▸"}
           </button>
           {showDropped && (
             <div className="dropped-list">
-              {uncertain.map((c) => (
+              {droppedByVerifier.map((c) => (
                 <div key={c.claim_id} className="dropped-row">
                   <div className="claim-text">{c.text}</div>
                   <div className="dropped-reason">
