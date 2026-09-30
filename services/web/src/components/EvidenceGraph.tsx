@@ -38,6 +38,10 @@ export function buildGraph(claims: Claim[], evidence: Record<string, EvidenceHit
   const chunkToDoc = new Map<string, string>();
 
   for (const claim of claims) {
+    // "No evidence found for <sub-query>" placeholders are the orchestrator
+    // recording an unanswered sub-intent, not claims about the corpus; the
+    // answer panel's "Not in the corpus" block is where they belong.
+    if (claim.reason_code === "NO_EVIDENCE_FOR_SUBQUERY") continue;
     const superseded = diff?.superseded.includes(claim.claim_id) ?? false;
     const dropped = claim.status === "uncertainty";
     const state = dropped ? "dropped" : superseded ? "superseded" : "live";

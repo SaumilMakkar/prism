@@ -12,10 +12,20 @@ from prism_core.schemas import RetrievalHit
 
 from app.replay.replay import ReplayingProvider
 
+# Mirrors prompts/synthesize.md (the team-authored contract). The rules
+# after the schema are what stop a live model from writing commentary
+# ("the evidence does not explain…") as if it were a claim: such items are
+# not claims, cannot carry a verbatim quote, and would only be dropped by
+# the verifier downstream — the model is told to return nothing instead.
 SYSTEM_TEMPLATE = (
     "You answer using ONLY the evidence chunks provided. Return strict JSON: "
     '{{"claims": [{{"text": "...", "citation_id": "Doc_ID §Section", "quote": "verbatim substring"}}]}}. '
-    "citation_id must be one of: {allowed_ids}. quote must be an exact substring of the cited chunk."
+    "Rules: citation_id must be one of: {allowed_ids} — never invent an id. "
+    "quote must be an exact, verbatim substring of the cited chunk's text, not a paraphrase; "
+    "if you cannot find a supporting verbatim quote, omit the claim. "
+    "Each claim states a fact from the evidence that answers the question. "
+    "If no evidence answers the question, return {{\"claims\": []}} — do not explain what the "
+    "evidence lacks, do not apologise, do not describe the evidence."
 )
 
 
@@ -46,15 +56,23 @@ def parse_synthesize_response(raw: str, sub_intent: str) -> list[Claim]:
 
     claims: list[Claim] = []
     for item in raw_claims:
+        if not isinstance(item, dict):
+            continue
         text = str(item.get("text", "")).strip()
-        if not text:
+        citation_id = item.get("citation_id")
+        quote = item.get("quote")
+        # A claim without a citation or a quote can never be verified
+        # (ADR-0005) and the prompt says to omit it; it is model commentary,
+        # not a claim, so it is dropped here rather than shown as a
+        # "dropped by the verifier" row that a judge would have to decode.
+        if not text or not citation_id or not quote:
             continue
         claims.append(
             Claim(
                 claim_id=str(uuid.uuid4()),
                 text=text,
-                citation_id=item.get("citation_id"),
-                quote=item.get("quote"),
+                citation_id=str(citation_id),
+                quote=str(quote),
                 status=ClaimStatus.UNCERTAINTY,  # verification happens in gateway
                 sub_intent=sub_intent,
             )

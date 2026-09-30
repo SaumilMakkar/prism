@@ -164,3 +164,21 @@ def test_controller_decision_event_records_evaluated_features(tmp_path):
     decision_events = [e for e in orch.telemetry.read_all() if e["event"] == "controller_decision"]
     assert decision_events[0]["features"]["entities"] == ["phone"]
     assert decision_events[0]["features"]["clause_boundary"] is True
+
+
+def test_re_asked_unanswerable_sub_query_gets_one_placeholder(tmp_path):
+    orch = make_orchestrator(tmp_path)
+
+    def no_claims(self, session_id, sub_query, evidence):
+        return [], "offline"
+
+    with patch.object(SessionControllers, "fetch_features", _retrieve_features), patch.object(
+        Orchestrator, "_embed", lambda self, t: [1.0]
+    ), patch.object(Orchestrator, "_decompose", lambda self, sid, t: ([t.rstrip(".")], "offline")), patch.object(
+        Orchestrator, "_search", lambda self, q, top_k=5: [hit()]
+    ), patch.object(Orchestrator, "_synthesize", no_claims), patch.object(Orchestrator, "_nli", lambda self, p, h: True):
+        orch.process_chunk("s", "h", 0, "who made this device.")
+        resp = orch.process_chunk("s", "h", 1, "Who made this device?")
+
+    placeholders = [c for c in resp["claims"] if c["reason_code"] == "NO_EVIDENCE_FOR_SUBQUERY"]
+    assert len(placeholders) == 1

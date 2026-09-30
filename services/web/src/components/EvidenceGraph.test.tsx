@@ -86,6 +86,21 @@ describe("buildGraph", () => {
   });
 });
 
+describe("buildGraph placeholders", () => {
+  it("leaves no-evidence placeholders out of the graph", () => {
+    const placeholder = claim({
+      claim_id: "p1",
+      text: "No evidence found for: who is the father",
+      citation_id: null,
+      status: "uncertainty",
+      reason_code: "NO_EVIDENCE_FOR_SUBQUERY",
+    });
+    const g = buildGraph([placeholder, claim({})], { "DOC_A §1.1": hit({}) }, undefined);
+    expect(g.claims).toHaveLength(1);
+    expect(g.claims[0].id).toBe("claim:c1");
+  });
+});
+
 describe("EvidenceGraph rendering", () => {
   it("renders one node per document, chunk and claim", () => {
     const { container } = render(

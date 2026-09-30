@@ -45,3 +45,25 @@ def test_format_evidence_omits_heading_line_when_none():
     hit = RetrievalHit(doc_id="KB_012", section="2.2", text="A boot loop is caused by...", score=1.0, source="fused")
     formatted = _format_evidence([hit])
     assert "Heading:" not in formatted
+
+
+def test_commentary_without_citation_or_quote_is_not_a_claim():
+    # A live model sometimes answers an off-corpus question with prose about
+    # what the evidence lacks; that is not a claim and must not surface as
+    # a verifier rejection.
+    raw = (
+        '{"claims": ['
+        '{"text": "The provided evidence does not explain this.", "citation_id": null, "quote": null},'
+        '{"text": "The evidence only covers connectivity.", "citation_id": "KB_030 §7.1", "quote": ""}'
+        "]}"
+    )
+    assert parse_synthesize_response(raw, sub_intent="x") == []
+
+
+def test_system_prompt_tells_the_model_to_return_nothing_rather_than_commentary():
+    from app.synthesize.synthesize import SYSTEM_TEMPLATE
+
+    rendered = SYSTEM_TEMPLATE.format(allowed_ids="KB_012 §2.1")
+    assert '"claims": []' in rendered
+    assert "do not explain what the evidence lacks" in rendered
+    assert "never invent an id" in rendered
