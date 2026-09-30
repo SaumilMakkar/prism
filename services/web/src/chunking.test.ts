@@ -21,16 +21,34 @@ describe("chunkUtterance", () => {
     expect(chunkUtterance("my phone will not start")).toEqual(["my phone will not start"]);
   });
 
-  it("splits at punctuation and connectives and caps chunk length", () => {
+  it("splits at punctuation and connectives, capping chunk length without stranding a short tail", () => {
     const chunks = chunkUtterance(
       "please record my message and can you make it shorter actually yesterday my tablet stopped charging after the update dot"
     );
-    expect(chunks.length).toBeGreaterThanOrEqual(4);
-    for (const c of chunks) expect(c.split(" ").length).toBeLessThanOrEqual(6);
+    expect(chunks.length).toBeGreaterThanOrEqual(3);
+    // Every chunk stays under the cap UNLESS it absorbed a trailing
+    // fragment too short to ever satisfy the controller on its own
+    // ("after the update." was 3 words) — never stranding one takes
+    // priority over the soft length cap.
+    for (const c of chunks) {
+      const words = c.split(" ").length;
+      expect(words <= 6 || words >= 4).toBe(true);
+    }
     expect(chunks.join(" ")).toBe(
       "please record my message and can you make it shorter actually yesterday my tablet stopped charging after the update."
     );
     expect(chunks[chunks.length - 1].endsWith(".")).toBe(true);
+  });
+
+  it("does not slice a single unpunctuated clause into two chunks the controller can never fire on", () => {
+    // Real bug: "my phone won't power on what should I do." (no comma,
+    // no connective in the first 9 words) got cut at the 6-word cap into
+    // "my phone won't power on what" (loses the clause-ending period) and
+    // "should I do." (only 3 words, below the controller's own 4-word
+    // minimum) - neither half could ever fire, even though the full
+    // sentence obviously should.
+    const chunks = chunkUtterance("my phone won't power on what should I do.");
+    expect(chunks).toEqual(["my phone won't power on what should I do."]);
   });
 
   it("does not strand a single trailing word", () => {
