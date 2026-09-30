@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-AI context file for this repository, disclosed in [documentation/AI_Disclosure_DRAFT.md](documentation/AI_Disclosure_DRAFT.md) — the same posture as last year's winning team's `.github/copilot-instructions.md` (see [documentation/prelude.md](documentation/prelude.md) Section 8).
+AI context file for this repository, disclosed in [documentation/AI_Disclosure.pdf](documentation/AI_Disclosure.pdf) — the same posture as last year's winning team's `.github/copilot-instructions.md` (see [documentation/prelude.md](documentation/prelude.md) Section 8).
 
 ## What this project is
 
@@ -27,4 +27,4 @@ Prelude — a streaming, verifiable, refine-not-restart RAG engine for Samsung P
 
 ## Disclosure
 
-Team designs architecture, thresholds, evaluation methodology, and ADRs by hand. AI assistance (Claude Code) is used for implementation, boilerplate, and test scaffolding under team review — see `documentation/AI_Disclosure_DRAFT.md` for the feature-by-feature breakdown.
+Team designs architecture, thresholds, evaluation methodology, and ADRs by hand. AI assistance (Claude Code) is used for implementation, boilerplate, and test scaffolding under team review — see `documentation/AI_Disclosure.pdf` for the feature-by-feature breakdown.

@@ -2,7 +2,29 @@
 
 *Retrieval that starts before the question ends.*
 
-Samsung PRISM Gen AI Hackathon 3.0 · Theme 4. See [documentation/prelude.md](documentation/prelude.md) for the full positioning/strategy write-up this project is built from.
+[![CI](https://github.com/iakshkhurana/prism/actions/workflows/ci.yml/badge.svg)](https://github.com/iakshkhurana/prism/actions/workflows/ci.yml)
+[![Images](https://github.com/iakshkhurana/prism/actions/workflows/images.yml/badge.svg)](https://github.com/iakshkhurana/prism/actions/workflows/images.yml)
+[![Release](https://img.shields.io/github/v/release/iakshkhurana/prism)](https://github.com/iakshkhurana/prism/releases)
+
+Prelude is a retrieval-augmented generation engine for live voice support. It starts retrieving while the customer is still speaking, splits one utterance into parallel sub-questions, refines the answer instead of restarting when a late detail arrives, and backs every claim with a `[Doc_ID §Section]` citation and a verbatim quote or says plainly that the corpus does not cover it.
+
+Built for Samsung PRISM Gen AI Hackathon 3.0, Theme 4, and positioned as **Live Agent Assist**: the agent sees a cited answer forming on screen before the caller finishes the sentence.
+
+## Contents
+
+- [Scorecard](#scorecard)
+- [How it works](#how-it-works)
+- [Quick start](#quick-start)
+- [Configuration](#configuration)
+- [Using the dashboard](#using-the-dashboard)
+- [API](#api)
+- [Evaluation](#evaluation)
+- [Development](#development)
+- [Deployment](#deployment)
+- [Security and privacy](#security-and-privacy)
+- [Project structure](#project-structure)
+- [Documentation](#documentation)
+- [AI disclosure](#ai-disclosure)
 
 ## Scorecard
 
@@ -17,83 +39,225 @@ Samsung PRISM Gen AI Hackathon 3.0 · Theme 4. See [documentation/prelude.md](do
 | G5 | Verified session continuity | — | 100.0 ✔ |
 | G6 | Trace coverage | 100% | 100.0 ✔ |
 
-Measured on 2026-09-29 by `make eval` through the full `docker compose` stack (`ML_BACKEND=hash`, `AI_MODE=offline` — no API key) against the 7 labelled streams in `evaluation/streams/`, driven through nginx exactly as the dashboard is. Real end-to-end testing this way caught and fixed three actual bugs (a citation-ID collision that let a superseded document corrupt retrieval ranking, a hash-chain that broke on service restart, and an entity-extraction fallback that never fired on lowercase transcript text) — see git history. Full detail: [evaluation/results/scorecard.md](evaluation/results/scorecard.md).
+Measured on 2026-09-29 by `make eval` through the full Docker stack (`ML_BACKEND=hash`, `AI_MODE=offline`, no API key) against the 7 labelled streams in `evaluation/streams/`, driven through nginx exactly as the dashboard is. Mean headroom 0.14 chunks, false-positive rate on off-corpus questions 0.0%. Full report: [evaluation/Evaluation_Benchmarks.md](evaluation/Evaluation_Benchmarks.md); raw numbers: [evaluation/results/scorecard.md](evaluation/results/scorecard.md).
 
-## What this is
-
-A RAG engine that retrieves while the user is still speaking, splits one sentence into parallel sub-questions, refines an answer instead of restarting when late details arrive, and cites `[Doc_ID §Section]` on every claim or says it is uncertain. Positioned as **Live Agent Assist** for voice support — see [documentation/POSITIONING.md](documentation/POSITIONING.md).
-
-## Prerequisites
-
-- Docker + Docker Compose v2
-- (Optional, for `AI_MODE=live`) an OpenAI API key — `make eval` and the default demo profile run in `offline` mode and need no key; `MODE=replay` serves committed trajectories ([ADR-0007](documentation/adr/0007-llm-choice-and-replay.md))
-
-## Setup
+## How it works
 
 ```
+ transcript chunk
+       │
+       ▼
+ ┌─────────────┐  Wait / Retrieve / No-Retrieval + reason code (no LLM here)
+ │ controller  │  features: entity anchor, embedding drift, clause boundary, tokens
+ └─────┬───────┘
+       │ Retrieve
+       ▼
+ ┌─────────────┐  one LLM call, strict JSON, ≤ 4 sub-queries, session entities carried
+ │ decompose   │
+ └─────┬───────┘
+       │ per sub-query (session semantic cache first, cosine ≥ 0.9)
+       ▼
+ ┌─────────────┐  BM25 + dense (bge-small) → RRF → cross-encoder rerank
+ │ retrieval   │  every hit carries its BM25 rank, dense rank, RRF score, rerank rank
+ └─────┬───────┘
+       ▼
+ ┌─────────────┐  claims with citation + verbatim quote, or an empty list
+ │ synthesis   │
+ └─────┬───────┘
+       ▼
+ ┌─────────────┐  ID allow-list → quote match → NLI. Can only reject, never edit.
+ │ verifier    │
+ └─────┬───────┘
+       ▼
+ ┌─────────────┐  versioned claims; a late detail refines affected claims as a diff
+ │ claim graph │  30-minute TTL, session id only
+ └─────────────┘
+       every step → hash-chained telemetry with trace id, latency and reason
+```
+
+Design principles, each enforced by a test or a CI job:
+
+- **No LLM in the controller loop.** The trigger is deterministic features and a rule policy, so it fires in ~25 ms and its reasons are inspectable.
+- **The verifier only subtracts.** A claim citing an id outside this turn's retrieval set, or without a verbatim quote, or not entailed by its chunk, is moved to *uncertainty*. Fabricated citations are zero by construction, and the injected adversarial chunk in the demo corpus cannot reach *verified*.
+- **Refine, not restart.** New details update the affected claims and leave the rest; a "say that again, shorter" turn re-renders from stored claims with zero retrievals.
+- **Every number is measured.** The scorecard, the benchmark report and this README are generated from one `make eval` run; a hand-typed number fails CI.
+
+Architecture and decisions: [documentation/Architecture_Brief.md](documentation/Architecture_Brief.md) and [documentation/adr/](documentation/adr/).
+
+## Quick start
+
+Requirements: Docker with Compose v2. No API key and no model download are needed for the default profile.
+
+```bash
+git clone https://github.com/iakshkhurana/prism.git && cd prism
 cp .env.example .env
+docker compose up --build -d
 ```
 
-## Build & Run
+Open **http://localhost** for the front page and **http://localhost/console** for the dashboard, then press **Tour**. The corpus is ingested automatically when `vector-service` starts.
 
+The default profile runs `AI_MODE=offline` (a deterministic provider, no network) and `ML_BACKEND=hash` (dependency-free embeddings, reranker and NLI). A cold build takes about a minute; a warm start takes seconds.
+
+To stop: `docker compose down` (add `-v` to drop the Qdrant, Redis and telemetry volumes).
+
+## Configuration
+
+All settings are environment variables read from `.env` by `docker compose`.
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `AI_MODE` | `offline` | `live` calls OpenAI; `record` calls OpenAI and saves trajectories; `offline` is deterministic and key-free; `replay` serves committed trajectories and fails loudly (HTTP 424) on a miss. [ADR-0007](documentation/adr/0007-llm-choice-and-replay.md) |
+| `OPENAI_API_KEY` | empty | Required for `live` and `record` only. |
+| `DECOMPOSE_MODEL`, `SYNTHESIZE_MODEL` | `gpt-5.6-luna` | Models used in `live`/`record`. |
+| `ML_BACKEND` | `hash` | `transformer` uses bge-small, MiniLM cross-encoder and a transformer NLI checker. Also a build arg: `ML_BACKEND=transformer docker compose up --build -d ml-service` builds the image with those models. |
+| `HYBRID_ENABLED` | `true` | `false` runs dense-only retrieval (ablation 1). |
+| `AI_TIMEOUT_SECONDS` | `60` | Gateway budget per LLM call. |
+| `SESSION_TTL_SECONDS` | `1800` | Redis TTL for a session's claim graph. |
+| `SESSION_HMAC_SECRET` | dev value | Signs session tokens. Change it for any shared deployment. |
+| `RAW_LOGGING` | `false` | When `true`, transcript text is kept in telemetry. Never enable for a demo. |
+
+Switching modes on a running stack:
+
+```bash
+AI_MODE=live docker compose up -d --no-deps ai-service      # needs OPENAI_API_KEY in .env
+AI_MODE=offline docker compose up -d --no-deps ai-service   # back to key-free
 ```
-make up
+
+### Using your own corpus
+
+Put Markdown files with a frontmatter header into `corpus/` and restart `vector-service`. Each `### 2.1 Heading` section becomes one chunk cited as `[Doc_ID §2.1]`; ids come from document structure, so they survive edits. A document with `status: superseded` is kept for reference but excluded from the index.
+
+```yaml
+---
+doc_id: KB_042
+title: Battery care
+version: 2
+effective_date: 2026-01-01
+status: current
+---
 ```
 
-Brings up nginx, gateway, ml-service, vector-service, qdrant, ai-service, redis, and the web dashboard, then ingests the demo corpus. Target: ≤ 90 s on a clean machine. Front page: http://localhost — dashboard: http://localhost/console.
+Only Markdown is ingested in this version.
 
-## Demo Video
+## Using the dashboard
 
-See [documentation/VIDEO_SCRIPT.md](documentation/VIDEO_SCRIPT.md) for the timed script; the rendered video link goes here once recorded. Until then, [services/web/public/media/console-demo.webm](services/web/public/media/console-demo.webm) is an unscripted screen recording of the console on synthetic input (also embedded on the front page at http://localhost).
+The console is built for two people at once: the agent who needs a calm, cited answer, and the judge who needs to see the engine deciding.
 
-## Running Evaluations
+- **Transcript band** with a headroom ruler: ticks per chunk, a hollow marker at the labelled safe point (guided tour only), a filled marker where the controller fired, and a decision strip with the reason for every chunk.
+- **Answer panel**: claims with `[Doc_ID §Section]` chips and a three-step verifier trail, a diff from the previous version, a "Not in the corpus" block, and a collapsed "dropped by the verifier" section. Toggle *prose view* for a paragraph.
+- **Evidence drawer**: click a citation to see the full chunk with the quote marked, document metadata, and the hit's BM25/dense/RRF/rerank provenance.
+- **Engine column**: controller lamp with the evaluated features, sub-query fan-out with cache hits, latency waterfall, evidence graph, and the telemetry pane with *Verify chain* and *Export JSONL*.
+- **Input**: press **Mic** (Web Speech, Chrome) or type a chunk and press Enter. Spoken sentences are cut into clause-sized chunks so the controller sees real boundaries.
+- **Keyboard**: `M` mic, `T` tour, `Esc` closes any drawer. Appearance menu in the header; the choice is stored per browser only.
 
+The engine answers only from the corpus. An off-topic question ends in "Not in the corpus" by design.
+
+## API
+
+The gateway is the only public service; nginx serves it under `/api`.
+
+| Method | Path | Purpose |
+|---|---|---|
+| `POST` | `/session/start` | Returns `session_id`, a signed `token`, and `session_ttl_seconds`. |
+| `POST` | `/turn/{token}` | Body `{"chunk_index": 0, "text": "..."}`. Returns the controller decision and reason, the session's claims, the diff from the previous version, and this turn's evidence with provenance. |
+| `GET` | `/claims/{token}` | Current claim graph. |
+| `GET` | `/telemetry/{token}` | This session's own telemetry events. |
+| `GET` | `/telemetry/verify` | Verifies the hash chain of the telemetry log. |
+| `GET` | `/cost/{token}` | Cumulative LLM spend for the session. |
+| `GET` | `/healthz` | Status plus the active `ai_mode`, `ml_backend` and TTL. |
+| `GET` | `/demo/streams`, `/demo/streams/{name}` | The committed evaluation streams, read-only, for the guided tour. |
+
+Peer failures are reported with their reason: a provider error is a `502` whose `detail` names the upstream service and message; an unreachable peer is a `503`.
+
+```bash
+token=$(curl -s -X POST http://localhost/api/session/start | jq -r .token)
+curl -s -X POST http://localhost/api/turn/$token \
+  -H 'Content-Type: application/json' \
+  -d '{"chunk_index": 0, "text": "My Galaxy phone will not power on at all, even after charging it."}' | jq
 ```
-make eval          # offline mode (default), no API key
-make eval MODE=live
-make eval-ablation  # dense-only retrieval, writes scorecard_dense_only.md
-make test           # unit tests across packages/core and all services
+
+Prelude is also exposed as MCP tools for voice-agent stacks; see [services/mcp-adapter/README.md](services/mcp-adapter/README.md).
+
+## Evaluation
+
+```bash
+make eval                 # G1–G6 through the running stack, offline mode, writes evaluation/results/scorecard.md
+make eval MODE=live       # same, with the real models
+make eval-ablation        # dense-only retrieval, writes scorecard_dense_only.md next to the main scorecard
 ```
 
-See [evaluation/README.md](evaluation/README.md).
+Seven labelled streams, one per category: `simple`, `compound`, `late_detail`, `no_evidence`, `noise`, `presentation`, `adversarial`. What each tests and how the gates are computed is in [evaluation/README.md](evaluation/README.md). No query text, answer or adversarial document id from the streams may appear under `services/`; `scripts/check_no_eval_hardcode.py` enforces this in CI on every push.
 
-## Project Structure
+## Development
+
+```bash
+make test        # unit tests: packages/core and every service, plus the harness
+make lint        # the hardcode check
+cd services/web && npm install && npm test && npm run dev   # dashboard on :5173 with /api proxied to the gateway
+```
+
+Continuous integration runs on every push: unit tests for each service, the web build and tests, JSON Schema validation, the hardcode check, the README/scorecard sync check, a Trivy scan, and a compose-smoke job that builds the whole stack and drives one real turn through nginx. Merges to `main` publish images to GHCR.
+
+Rules every change follows are in [CLAUDE.md](CLAUDE.md): no LLM in the controller, the verifier only subtracts, `packages/core` stays dependency-free, small commits, every module gets a test.
+
+## Deployment
+
+The stack is a single `docker compose` file, so one Linux VM with Docker is the least-risk deployment:
+
+```bash
+curl -fsSL https://get.docker.com | sh
+git clone https://github.com/iakshkhurana/prism.git && cd prism
+cp .env.example .env            # set SESSION_HMAC_SECRET; set AI_MODE and OPENAI_API_KEY for live
+docker compose up --build -d
+```
+
+nginx listens on port 80 and applies rate limits and a 2 MB body cap. Put a TLS terminator (Caddy, a cloud load balancer) in front for HTTPS. Telemetry is a JSONL file in the `telemetry` volume; Qdrant and Redis keep their own volumes.
+
+## Security and privacy
+
+- Session state lives in Redis for 30 minutes, keyed by session id only. No user identity is stored anywhere.
+- Session ids are hashed before they reach telemetry; transcript text is not logged unless `RAW_LOGGING=true`.
+- Session tokens are HMAC-signed; PII patterns are redacted from transcript text before processing.
+- Retrieved content never enters a system prompt; the verifier, not prompt wording, is the defence against injected documents.
+- Threat model T1–T10 with the test that covers each: [documentation/SECURITY.md](documentation/SECURITY.md).
+
+## Project structure
 
 ```
 prism/
-├── README.md, REPRODUCTION.md, CLAUDE.md, Makefile, docker-compose.yml, .env.example
-├── .github/workflows/        ci.yml, images.yml
-├── packages/core/            schemas, controller policy, fusion, claim graph, hashchain — pure, unit-tested
+├── packages/core/          schemas, controller policy, RRF fusion, claim graph, hash chain — pure, no I/O
 ├── services/
-│   ├── gateway/               controller, orchestrator, semantic cache, claims, verifier, telemetry, security
-│   ├── ml-service/             embed, features, rerank, nli
-│   ├── vector-service/         ingest, chunking, search, fusion
-│   ├── ai-service/              providers, decompose, synthesize, replay, cost
-│   ├── mcp-adapter/             Prelude as MCP tools over the gateway API (F19)
-│   ├── web/                    React + Vite + TS dashboard
-│   └── eval-runner/
-├── prompts/                  versioned templates
-├── corpus/                   demo corpus (Samsung support KB); judges mount theirs here
-├── schemas/                  events / telemetry / output_record JSON Schemas
-├── trajectories/             recorded LLM responses → key-free replay
-├── evaluation/                streams/, harness/, results/scorecard.md
-├── documentation/             Architecture_Brief.md, adr/0001–0008.md, diagrams/, SECURITY.md, TELEMETRY.md
-├── deploy/nginx/
-└── assets/
+│   ├── gateway/            controller, orchestrator, semantic cache, claim store, verifier, telemetry, security
+│   ├── ml-service/         embeddings, chunk features, rerank, NLI (hash or transformer backend)
+│   ├── vector-service/     ingestion, section-aware chunking, BM25 + dense search
+│   ├── ai-service/         OpenAI / offline / replay providers, decompose, synthesize, cost meter
+│   ├── mcp-adapter/        Prelude as MCP tools over the gateway API
+│   ├── web/                front page and console (React, Vite, TypeScript)
+│   └── eval-runner/        container that runs the harness against the stack
+├── evaluation/             labelled streams, scoring harness, results, benchmark report
+├── corpus/                 demo corpus (Samsung support KB); mount your own here
+├── prompts/                versioned decompose and synthesis prompts
+├── schemas/                JSON Schemas for events, telemetry and output records
+├── trajectories/           recorded provider responses for replay mode
+├── documentation/          architecture brief, ADRs, security, telemetry, positioning, AI disclosure
+├── deploy/nginx/           edge config
+├── scripts/                CI checks
+└── .github/workflows/      ci.yml, images.yml
 ```
 
 ## Documentation
 
-Start with [documentation/Architecture_Brief.md](documentation/Architecture_Brief.md). Decision records: [documentation/adr/](documentation/adr/). Threat model: [documentation/SECURITY.md](documentation/SECURITY.md). Event schemas: [documentation/TELEMETRY.md](documentation/TELEMETRY.md).
+- [Architecture brief](documentation/Architecture_Brief.md) and [decision records](documentation/adr/)
+- [Evaluation benchmarks](evaluation/Evaluation_Benchmarks.md) and [evaluation README](evaluation/README.md)
+- [Reproduction guide](REPRODUCTION.md)
+- [Security threat model](documentation/SECURITY.md) and [telemetry schema](documentation/TELEMETRY.md)
+- [Positioning](documentation/POSITIONING.md), [video script](documentation/VIDEO_SCRIPT.md), [dashboard design record](services/web/DESIGN.md)
+- [Console screen recording](services/web/public/media/console-demo.webm) on synthetic input, also embedded on the front page
 
-## Privacy & Data
+## Technology
 
-Session state lives in Redis with a 30-minute TTL, keyed by session id only — no user identity is ever stored. Telemetry hashes session ids before they leave `gateway`. `RAW_LOGGING=false` by default. Full threat model: [documentation/SECURITY.md](documentation/SECURITY.md).
+FastAPI on Python 3.11 · Qdrant · rank-bm25 · Redis · OpenAI (GPT-5.6 Luna) · sentence-transformers (bge-small, MiniLM) · React 18, Vite, TypeScript · Docker Compose · nginx · FastMCP.
 
-## Technology Stack
+## AI disclosure
 
-FastAPI (Python 3.11) across gateway/ml-service/vector-service/ai-service · Qdrant (dense HNSW) · BM25 (`rank-bm25`) · Redis · React + Vite + TypeScript · OpenAI (GPT-5.6 Luna / GPT-5 nano) · Docker Compose · nginx.
-
-## AI Disclosure
-
-[documentation/AI_Disclosure_DRAFT.md](documentation/AI_Disclosure_DRAFT.md) — feature-by-feature breakdown of team vs. AI contribution. `CLAUDE.md` (this repo's AI context file) is disclosed there as well.
+The team designed the product, architecture, thresholds, evaluation methodology and UI brief; AI coding assistance was used for implementation and test scaffolding under team review. The submitted form is [documentation/AI_Disclosure.pdf](documentation/AI_Disclosure.pdf), and [CLAUDE.md](CLAUDE.md), the instruction file that assistance worked from, is part of the repository.
