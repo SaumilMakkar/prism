@@ -20,7 +20,21 @@ SYSTEM_TEMPLATE = (
 
 
 def _format_evidence(hits: list[RetrievalHit]) -> str:
-    return "\n\n".join(f"[{h.citation_id}]\n{h.text}" for h in hits)
+    # The section heading often carries the exact phrasing a customer uses
+    # ("Device powers on but restarts repeatedly") that the body text never
+    # repeats verbatim — dropping it silently lost real information the
+    # retrieval pipeline already measured (RetrievalHit.heading), for both
+    # a real LLM and the offline fallback's own relevance check.
+    # "Heading: " is a stable, unambiguous marker: OfflineProvider (which
+    # only sees this flattened string, not the structured RetrievalHit)
+    # uses it to fold the heading into relevance scoring while keeping quote
+    # extraction scoped to the line(s) after it — a quote must stay a real
+    # substring of h.text, never of the heading.
+    blocks = []
+    for h in hits:
+        heading_line = f"Heading: {h.heading}\n" if h.heading else ""
+        blocks.append(f"[{h.citation_id}]\n{heading_line}{h.text}")
+    return "\n\n".join(blocks)
 
 
 def parse_synthesize_response(raw: str, sub_intent: str) -> list[Claim]:
