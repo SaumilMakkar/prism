@@ -73,7 +73,7 @@ def test_synthesize_does_not_confuse_unrelated_chunks_via_contraction_fragments(
     # Real bug: "won't" used to tokenize as two words, "won" and "t" — a
     # bare "t" (and "won") then spuriously matched ANY other chunk whose
     # heading also happened to contain a contraction, even on a completely
-    # different topic. "My phone won't power on" was matching a
+    # different topic. "My phone won't power back on" was matching a
     # screen-touch chunk ("Screen won't respond to touch") ahead of the
     # actually-correct power-on chunk purely because both contain "won't".
     provider = OfflineProvider()
@@ -90,7 +90,7 @@ def test_synthesize_does_not_confuse_unrelated_chunks_via_contraction_fragments(
         "and Volume Down buttons for 10 seconds. If the device does not restart, connect it to a "
         "charger for 15 minutes and try again — a fully drained battery can appear as an "
         "unresponsive screen.\n\n"
-        "Question: my phone won't power on, what should I do"
+        "Question: my phone won't power back on, what should I do"
     )
     raw = provider.complete(SYNTHESIZE_SYSTEM, user, "offline-model")
     claims = parse_synthesize_response(raw, sub_intent="power on")

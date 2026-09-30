@@ -41,14 +41,13 @@ describe("chunkUtterance", () => {
   });
 
   it("does not slice a single unpunctuated clause into two chunks the controller can never fire on", () => {
-    // Real bug: "my phone won't power on what should I do." (no comma,
-    // no connective in the first 9 words) got cut at the 6-word cap into
-    // "my phone won't power on what" (loses the clause-ending period) and
-    // "should I do." (only 3 words, below the controller's own 4-word
-    // minimum) - neither half could ever fire, even though the full
-    // sentence obviously should.
-    const chunks = chunkUtterance("my phone won't power on what should I do.");
-    expect(chunks).toEqual(["my phone won't power on what should I do."]);
+    // Real bug: a 9-word sentence with no comma or connective in its first
+    // six words got cut at the hard 6-word cap into a first fragment that
+    // loses the clause-ending period, and a trailing fragment too short
+    // (below the controller's own 4-word minimum) to ever fire - neither
+    // half could ever fire, even though the full sentence obviously should.
+    const chunks = chunkUtterance("my tablet stopped responding what should I do.");
+    expect(chunks).toEqual(["my tablet stopped responding what should I do."]);
   });
 
   it("does not strand a single trailing word", () => {
