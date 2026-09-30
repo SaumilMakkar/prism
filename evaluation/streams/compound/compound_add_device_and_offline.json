@@ -1,0 +1,8 @@
+{
+  "chunks": [
+    "How do I add a new SmartThings device, and why would a paired device show offline?"
+  ],
+  "expected_safe_chunk_index": 0,
+  "expected_min_subintents": 2,
+  "expected_relevant_doc_ids": ["KB_030 §6.2", "KB_030 §7.1"]
+}

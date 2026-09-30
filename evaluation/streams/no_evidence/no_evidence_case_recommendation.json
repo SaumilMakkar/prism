@@ -1,0 +1,8 @@
+{
+  "chunks": [
+    "Can you recommend a good case or screen protector for it?"
+  ],
+  "expected_safe_chunk_index": 0,
+  "expected_uncertain": true,
+  "expected_relevant_doc_ids": []
+}

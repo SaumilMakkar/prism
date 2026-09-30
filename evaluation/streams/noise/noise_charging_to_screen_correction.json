@@ -1,0 +1,9 @@
+{
+  "chunks": [
+    "My charging port isn't working right,",
+    "actually sorry,",
+    "my screen doesn't respond to touch at all."
+  ],
+  "expected_safe_chunk_index": 0,
+  "expected_relevant_doc_ids": ["KB_012 §1.1", "KB_012 §3.1"]
+}

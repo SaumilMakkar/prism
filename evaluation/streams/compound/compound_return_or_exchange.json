@@ -1,0 +1,8 @@
+{
+  "chunks": [
+    "What's the return window for a refund, and can a defective device be exchanged instead?"
+  ],
+  "expected_safe_chunk_index": 0,
+  "expected_min_subintents": 2,
+  "expected_relevant_doc_ids": ["POL_004 §5.1", "POL_004 §5.2"]
+}
