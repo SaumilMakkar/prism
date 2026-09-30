@@ -1,15 +1,9 @@
-"""A peer failure must reach the client as a reason, not a bare 500."""
-import os
-import tempfile
+"""A peer failure must reach the client as a reason, not a bare 500.
+(TELEMETRY_DIR is redirected to a temp dir in conftest.py.)"""
+import httpx
+from fastapi.testclient import TestClient
 
-# app.main builds a TelemetryWriter at import, which creates TELEMETRY_DIR;
-# the default /telemetry is not writable on a CI runner.
-os.environ.setdefault("TELEMETRY_DIR", tempfile.mkdtemp(prefix="prelude-telemetry-"))
-
-import httpx  # noqa: E402
-from fastapi.testclient import TestClient  # noqa: E402
-
-from app import main  # noqa: E402
+from app import main
 
 
 def _status_error(status: int, body: dict) -> httpx.HTTPStatusError:
