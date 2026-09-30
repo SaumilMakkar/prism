@@ -63,6 +63,24 @@ def test_g4_citation_support_and_fabrication_detection():
     assert fabricated == 0
 
 
+def test_g4_excludes_explicit_no_evidence_claims_from_citation_support():
+    # A NO_EVIDENCE_FOR_SUBQUERY claim is an honest "nothing to cite"
+    # marker, not a citation that was proposed and failed — it must not
+    # drag down the citation-support percentage the way a genuinely bad
+    # citation would.
+    result = TurnResult(
+        stream_id="s1",
+        category="simple",
+        final_claims=[
+            {"status": "verified", "citation_id": "KB_012 §2.1", "reason_code": "QUOTE_MATCH_AND_ENTAILED"},
+            {"status": "uncertainty", "citation_id": None, "reason_code": "NO_EVIDENCE_FOR_SUBQUERY"},
+        ],
+    )
+    support_pct, fabricated = compute_g4_citation_support([result])
+    assert support_pct == 100.0
+    assert fabricated == 0
+
+
 def test_g5_session_continuity_requires_at_least_one_verified_claim():
     good = TurnResult(stream_id="s1", category="late_detail", final_claims=[{"status": "verified"}])
     bad = TurnResult(stream_id="s2", category="late_detail", final_claims=[{"status": "uncertainty"}])

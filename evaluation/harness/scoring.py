@@ -87,7 +87,18 @@ def compute_g3_multi_intent(results: list[TurnResult]) -> float:
 
 
 def compute_g4_citation_support(results: list[TurnResult]) -> tuple[float, int]:
-    all_claims = [c for r in results for c in r.final_claims]
+    # A NO_EVIDENCE_FOR_SUBQUERY claim is an explicit, honest "nothing to
+    # cite" marker (orchestrator.py) — structurally different from a claim
+    # that was proposed with a citation and failed verification. Counting
+    # it against citation support would conflate "correctly found no
+    # evidence" with "got a citation wrong"; false positives on no_evidence
+    # streams are already covered separately by compute_false_positive_rate.
+    all_claims = [
+        c
+        for r in results
+        for c in r.final_claims
+        if c.get("reason_code") != "NO_EVIDENCE_FOR_SUBQUERY"
+    ]
     if not all_claims:
         return 0.0, 0
     verified = sum(1 for c in all_claims if c["status"] == "verified")
