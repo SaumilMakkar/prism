@@ -28,7 +28,7 @@ Each subfolder under `evaluation/streams/` holds one query category, as timestam
 | `presentation/` | "Say that again, shorter" and similar re-render requests | No-retrieval / F8 correctness |
 | `adversarial/` | An injected corpus chunk instructing the model to cite it — correct behavior is the verifier dropping the claim (`adversarial_doc_id` must never reach `verified`) | G4 (zero fabricated IDs), SECURITY.md T3 |
 
-7 streams across these 7 categories as of this writing (one per category above), built by the team — no eval query, answer, or Doc_ID appears anywhere under `services/`; CI greps for this on every push ([SECURITY.md](../documentation/SECURITY.md) T8). `documentation/prelude.md`'s 40-60 figure was the original target scale; expanding coverage per category is tracked as follow-up work, not yet done.
+22 streams across these 7 categories as of this writing (4 simple, 4 compound, 3 late_detail, 3 no_evidence, 3 noise, 3 presentation, 2 adversarial), built by the team — no eval query, answer, or Doc_ID appears anywhere under `services/`; CI greps for this on every push ([SECURITY.md](../documentation/SECURITY.md) T8). `documentation/prelude.md`'s 40-60 figure was the original target scale; still short of it, but every stream added this round was individually verified against a live run rather than hand-guessed (see the false-negative and false-positive fixes it caught in `services/ai-service/app/providers/offline_provider.py`, e.g. the "won't" contraction bug).
 
 ## Ablations
 
