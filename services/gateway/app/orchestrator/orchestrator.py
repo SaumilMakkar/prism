@@ -11,7 +11,7 @@ import uuid
 
 import httpx
 from prism_core.controller import ChunkFeatures
-from prism_core.schemas import Claim, ClaimDiff, Decision, RetrievalHit
+from prism_core.schemas import Claim, ClaimDiff, ClaimStatus, Decision, RetrievalHit
 
 from app.cache.semantic_cache import SessionSemanticCache
 from app.claims.store import ClaimGraphStore
@@ -180,15 +180,40 @@ class Orchestrator:
 
             t0 = time.perf_counter()
             proposed_claims, synth_source = self._synthesize(session_id, sub_query, evidence)
+
+            no_evidence_claim = None
+            if not proposed_claims:
+                # Synthesis found nothing for THIS sub-question. Leaving the
+                # claim graph untouched here would silently keep showing
+                # whatever unrelated claim was already in the session from
+                # an earlier topic — the dashboard has no way to tell a
+                # judge "this is a stale answer to a different question"
+                # apart from an explicit one. Recording an uncertainty claim
+                # per sub-intent is what actually makes the "Not in the
+                # corpus" block appear for a genuinely new, unanswerable
+                # question, instead of nothing happening at all.
+                no_evidence_claim = Claim(
+                    claim_id=str(uuid.uuid4()),
+                    text=f"No evidence found for: {sub_query}",
+                    status=ClaimStatus.UNCERTAINTY,
+                    reason_code="NO_EVIDENCE_FOR_SUBQUERY",
+                    sub_intent=sub_query,
+                )
+
             self.telemetry.emit(
                 "synthesis_completed",
                 trace_id,
                 session_id_hash,
-                claim_ids=[c.claim_id for c in proposed_claims],
+                claim_ids=[c.claim_id for c in proposed_claims]
+                or ([no_evidence_claim.claim_id] if no_evidence_claim else []),
                 source=synth_source,
                 sub_query=sub_query,
                 latency_ms=round((time.perf_counter() - t0) * 1000, 1),
             )
+
+            if no_evidence_claim is not None:
+                all_claims.append(no_evidence_claim)
+                continue
 
             t0 = time.perf_counter()
             verified_claims = verify_claims(proposed_claims, evidence, self._nli)

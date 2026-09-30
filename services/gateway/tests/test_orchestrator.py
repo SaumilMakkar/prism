@@ -104,6 +104,60 @@ def test_turn_response_carries_evidence_with_citation_ids(tmp_path):
     assert resp["claims"][0]["status"] == "verified"
 
 
+def test_no_evidence_turn_records_an_explicit_uncertainty_claim(tmp_path):
+    orch = make_orchestrator(tmp_path)
+
+    def fake_synth_empty(self, session_id, sub_query, evidence):
+        return [], "offline"
+
+    with patch.object(SessionControllers, "fetch_features", _retrieve_features), patch.object(
+        Orchestrator, "_embed", lambda self, t: None
+    ), patch.object(Orchestrator, "_decompose", lambda self, sid, t: ([t], "offline")), patch.object(
+        Orchestrator, "_search", lambda self, query, top_k=5: [hit()]
+    ), patch.object(Orchestrator, "_synthesize", fake_synth_empty):
+        resp = orch.process_chunk("session-1", "hash-1", 0, "what's the trade-in value for my old phone?")
+
+    assert len(resp["claims"]) == 1
+    claim = resp["claims"][0]
+    assert claim["status"] == "uncertainty"
+    assert claim["reason_code"] == "NO_EVIDENCE_FOR_SUBQUERY"
+    assert claim["sub_intent"] == "what's the trade-in value for my old phone?"
+
+
+def test_no_evidence_turn_does_not_let_a_prior_unrelated_claim_stand_alone(tmp_path):
+    # Real bug: a verified claim from an earlier, unrelated topic (e.g. from
+    # the guided tour) stayed in the session's claim graph forever. When the
+    # next question was genuinely off-corpus, nothing distinguished "this
+    # answers your new question" from "this is leftover from before" - the
+    # old claim just kept rendering with no signal it was stale.
+    orch = make_orchestrator(tmp_path)
+
+    first = run_turn(orch, "my SmartThings device shows offline.", 0, [], lambda _t: [1.0, 0.0])
+    assert first["claims"][0]["status"] == "verified"
+    old_claim_id = first["claims"][0]["claim_id"]
+
+    def fake_synth_empty(self, session_id, sub_query, evidence):
+        return [], "offline"
+
+    with patch.object(SessionControllers, "fetch_features", _retrieve_features), patch.object(
+        Orchestrator, "_embed", lambda self, t: [0.0, 1.0]
+    ), patch.object(Orchestrator, "_decompose", lambda self, sid, t: ([t], "offline")), patch.object(
+        Orchestrator, "_search", lambda self, query, top_k=5: [hit()]
+    ), patch.object(Orchestrator, "_synthesize", fake_synth_empty):
+        second = orch.process_chunk(
+            "session-1", "hash-1", 1, "what's the trade-in value for my old phone?"
+        )
+
+    claim_ids = {c["claim_id"] for c in second["claims"]}
+    assert old_claim_id in claim_ids  # the old claim is still there (correct - not fabricated)
+    uncertain = [c for c in second["claims"] if c["status"] == "uncertainty"]
+    # ...but it is no longer alone: an explicit "no evidence for THIS
+    # question" claim exists too, so the dashboard can show both instead of
+    # silently presenting the old one as if it answers the new question.
+    assert len(uncertain) == 1
+    assert uncertain[0]["reason_code"] == "NO_EVIDENCE_FOR_SUBQUERY"
+
+
 def test_controller_decision_event_records_evaluated_features(tmp_path):
     orch = make_orchestrator(tmp_path)
     run_turn(orch, "phone will not power on.", 0, [], lambda _t: [1.0])
